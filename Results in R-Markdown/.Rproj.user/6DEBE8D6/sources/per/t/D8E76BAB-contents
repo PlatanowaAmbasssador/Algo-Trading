@@ -1,0 +1,2176 @@
+---
+output: 
+  pdf_document:
+    keep_tex: true
+    number_sections: true
+    fig_caption: true
+    latex_engine: xelatex
+mainfont: Times New Roman
+geometry: "left = 2.5cm, right = 2.5cm, top = 2.5cm, bottom = 2.5cm"
+header-includes:
+  - \usepackage[fontsize=11pt]{scrextend}
+  - \usepackage{setspace}\spacing{1.5}
+  - \usepackage{placeins}
+  - \DeclareMathOperator*{\maximum}{max}
+  - \usepackage{soul}
+  - \usepackage{color}
+  - \usepackage{floatrow}
+  - \floatsetup[figure]{capposition=top}    
+  - \setlength\LTleft\fill
+  - \setlength\LTright\fill
+  - \usepackage{float}
+  - \floatplacement{figure}{H}
+bibliography: references.bib
+csl: apa-no-ampersand.csl
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(ggplot2) 
+library(gridExtra)
+library(knitr)
+library('pacman')
+library(kableExtra)
+p_load(dplyr, forcats, knitr, kableExtra, tinytex, janitor)
+```
+\begin{centering}
+
+\vspace{1cm}
+\Large
+
+\singlespace
+{Univeristy of Warsaw}
+
+\Large
+
+\singlespace
+{Faculty of Economic Sciences}
+
+\vspace{2cm}
+
+\normalsize
+\singlespacing
+Kamil Kashif \\ Student number: 428629
+
+
+\Large
+\singlespacing
+{\bf LSTM-ARIMA, A HYBRID APPROACH \\TO ALGORITHMIC INVESTMENT STRATEGIES}
+
+\vspace{1.5cm}
+
+\normalsize
+\singlespacing
+Bachelor's Degree Thesis \\ Finance, International Investment, and Accounting
+
+\end{centering}
+
+\vspace{3cm}
+
+\begin{flushright}
+\normalsize
+\singlespacing
+The thesis written under the supervision of \\ Dr. hab. Robert Ślepaczuk prof. UW\\ Department of Quantitative Finance
+\end{flushright}
+
+\vspace{5cm}
+
+\begin {centering}
+
+Warsaw, June 2023
+
+\end{centering}
+\pagebreak
+
+Declaration of the supervisor \newline
+\newline
+I declare that the following thesis was written under my supervision and I state that it meets all criterias to be submitted for the procedure of academic degree award. \newline
+\newline
+I declare that my participation in the scientific article, which is a part of this thesis is ....%, while the supplement to the thesis was written independently by the graduate (s).\newline
+\newline
+Date \hspace{10cm}  Signature of the Supervisor\newline
+\newline
+\newline
+\newline
+Declaration of the author of the thesis \newline
+\newline
+Aware of the legal responsibility, I declare that I am the sole author of the following thesis and that the thesis is free from any content that constitutes copyright infringement or has been acquired contrary to applicable laws and regulations. \newline
+\newline
+I also declare that the thesis has never been a subject of degree-awarding procedures in any higher education institution. \newline
+\newline
+Moreover I declare that the attached version of the thesis is identical with the enclosed electronic version. \newline
+\newline
+I declare that my participation in the scientific article, which is part of this thesis is ........% (not less than 60%), while the supplement to the thesis was written by me. \newline
+\newline
+Date \hspace{10cm} Signature of the Author 
+
+\pagebreak
+\begin{centering}
+
+\vspace{2cm}
+
+\normalsize
+\singlespacing
+{\bf Abstract}
+
+\end{centering}
+
+\spacing{1.5}
+
+This study focuses on building an algorithmic investment strategy employing a hybrid approach that combines LSTM and ARIMA, referred to as LSTM-ARIMA. This unique algorithm uses LSTM to produce final predictions but also integrates the residuals obtained from ARIMA predictions among other inputs. The algorithm is tested across three equity indices (S\&P 500, FTSE 100, and CAC 40) using daily frequency data spanning from January 2000 to August 2023.Walk forward optimization is applied for hyperparameter tunning using Random Search and backtesting the algorithms. The selection of the optimal model is determined based on criteria outlined in Section 4.7. We considered two strategies for each algorithm: Long-Only and Long-Short. For each strategy and equity index, we compute the performance metrics and visualize the equity curve to identify the best strategy with the highest modified information ratio $(IR^{**}$). The findings conclude that the LSTM-ARIMA algorithm outperforms all the other algorithms across all the equity indices.
+
+\vspace{1cm}
+
+\begin{centering}
+
+\large
+\singlespacing
+{\bf Key Words}
+
+\normalsize
+\singlespacing
+deep learning, recurrent neural networks, investment strategy, LSTM, ARIMA, hybrid, walk-forward process
+
+\vspace{1cm}
+
+\large
+\singlespacing
+{\bf Area of study(codes according to Erasmus Subject Area Codes List)}
+
+\normalsize
+\singlespacing
+Economic(14300)
+
+\vspace{1cm}
+
+\large
+\singlespacing
+{\bf Theme classifications}
+
+\end{centering}
+
+\newpage 
+\linespread{0.9}\selectfont\tableofcontents 
+\linespread{1.5}\selectfont
+\newpage
+
+# Introduction
+
+Predicting the financial market is known to be quite challenging due to factors such as volatility, complexity of the financial system, and the constantly changing economic landscape. We could notice twice in the past 20 years, the 2008 recession and the Covid-19 pandemic , that there was so much uncertainty on how the markets will progress. Researchers and traders try many approaches to successfully predict the financial market. Unfortunately, not all are successful as it depends on the economical and political situation of the stock markets. They try to optimize their models ranging from simple linear regression models to advanced machine learning (ML) algorithms and being tested based on all types of invested assets.
+
+High-frequency trading is gaining much more popularity; however, due to its complexity it may not be available for all users. Therefore, for this research, we will consider only daily data. We believe that it can still give us the general picture of the interactions in the market and enables to develop an algorithmic investment strategy (AIS). The main focus of this study is to utilize the Auto-regressive Integrated Moving Average (ARIMA) and Long-Short Term Memory (LSTM) models, and combine them into a hybrid model called LSTM-ARIMA. The ultimate goal is to apply this hybrid model to develop an efficient AIS. Our main hypothesis states that *LSTM-ARIMA model will outperform other algorithms in most cases*. The ensuing are the research questions that our study aims to explore:
+
+> *RQ1. Is the investment algorithm robust to changes in the asset?* \newline 
+> *RQ2. Does LSTM-ARIMA perform better than the models individually?* \newline
+> *RQ3. Is the investment algorithmic robust to changes in the model hyperparameters?* \newline
+> *RQ4. Does the Long-Only or Long-Short strategy outperform the Buy&Hold?* 
+
+To evaluate our algorithmic investment strategies, we have selected three assets, namely, S\&P 500 (*GSPC*), FTSE 100 (*FTSE*), and CAC 40 (*FCHI*) equity indices}. The motivation behind the choice of assets was to diversify its results across various equity indices in order to capture the finest capability of the AIS. Therefore, each asset is chosen from stock markets of different regions, from New York stock exchange (NYSE) to London stock exchange (LSE) and Euronext stock market (PAR). Our in-sample data begins on *2000-01-03* for S\&P 500 and CAC 40 and *2000-01-04* for FTSE 100. The out-of-sample data for the S\&P 500 equity index starts on 2005-01-25, for FTSE 100 equity index on 2005-01-13, and for CAC 40 equity index on 2004-12-28 and lasts until *2023-08-30*.We capture the horizon of approximately 23 years. During this time frame, we capture two extreme times of the market. Considering extreme market conditions while training the model can help them perform well during both stable and volatile conditions.
+
+Our empirical research involves the development of algorithmic investment strategies based on the predicted closing price from ARIMA, LSTM, and LSTM-ARIMA models and generate investment signals based on an algorithm which will be discussed later on in the study. Additionally, we use the walk-forward optimization (WFO) as this technique reduces the risk of over-fitting to one specific sample of past returns. For each walk, \hl\{we divide our data into training, validation, and testing data sets, where the training set equals to 1000 trading days and validation and testing set equal to 250 trading days.Moreover, we perform hyperparameter tuning at every walk by performing random search using a set of parameters explained later on in the study.
+
+The structure of the paper is as follows: Section 1 contains an introduction. Section 2 presents a brief overview of literature. Section 3 provides us with the data description. Section 4 defines the methodology describing ARIMA, LSTM and LSTM-ARIMA models. It also presents the WFO, performance metrics, research description and the hyperparameter tuning. In Section 5, we show the empirical results of the strategies using the equity curves and performance metrics. In Section 6, we present the sensitivity analysis where we show the sensitivity of the outcomes to changes in the set of hyperparameters. In section 7, we present and ensembled AIS. In Section 8, we present the conclusion. And in the last Section 9, we present the references.
+
+# Literature
+
+Researchers are continuously searching for ways to build algorithmic investment strategies (AIS) and make  higher and less riskier profits  their investments This section will focus on the use of time series, machine learning, and hybrid models to forecast the stock market prices and create an efficient algorithmic investment strategies.  
+
+## Time Series Models
+
+Time series models are considered to be well performing as they can catch the features of the financial time series data such as the seasonality, trend, and the cyclicality of historical data to predict the future values. The time series model used in this study is ARIMA; however, in this section we will discuss  other types of models used for time series analysis ,as well. introduced by Box and Jenkins in 1976.
+
+ARIMA, introduced by @baj1976, has been one of the main tools of financial time series forecasting for a long time. ARIMA model is derived from the ARMA model, by taking the first difference of the prices in order to have a stationary data set.@mondal2014study studied the effectiveness of ARIMA by forecasting fifty-six stocks from Indian stock market from different industries. For their predictions, they achieved an accuracy of 85% and the fast-moving consumer goods (FMCG) sector was the most accurately predicted sector by ARIMA. Furthermore, they also concluded that in ARIMA the change in training data size does not influence the accuracy of their models.
+
+@ariyo2014stock used the ARIMA model to predict the prices of stocks fromthe New York Stock Exchange (NYSE) and Nigerian Stock Exchange (NSE). They chose Nokia's and Zenith Bank stocks and the time frame was 16 years and 5 years respectively. The authors find the best model using the Bayesian Information Criterion (BIC), the standard error of regression, and the highest adjusted-R-squared as the main criterion. They concluded that the best model to predict Nokia's stock was ARIMA(2,1,0) and for Zenith Bank, the best was ARIMA(1,0,1).
+
+@devi2013effective studied the effectiveness of ARIMA for the prediction of stock trend. The authors selected the parameters based on manual examination of ACF, PACF plots to find the AR and MA orders} The best model was selected based on the AIC and BIC criterion. The paper considered five years of historical data for the analysis. The authors conclude that ARIMA is the most accurate model to predict the stock trend and make investment decisions.
+
+@malladi2021time conducted a time series analysis of cryptocurrency returns and volatility using GARCH, VAR, and ARMAX models. ARMAX is an extension of the base ARMA which considers exogenous inputs. They test the algorithm on BTC and XRP. The comparison is done with a standard regression model. The conclusion is that both ARMAX and GARCH perform better than the standard regression and the VAR model, as expected. However, ARMAX showed the best results due its high accuracy.
+
+Vector Autoregression (VAR) model is also known for its time series modelling capabilities. @suharsono2017comparison use VAR and VECM to model the stock price. They use the ASEAN share price index and perform a manual search to find the best paramters for the models. The criteria to check the performance of the model was based on the Akaike information criterion (AIC). They concluded that in comparison to the VECM model, the VAR model performed the best in modelling.
+
+@gomez2021robust analyzed four algorithmic strategies and one of them was based on ARIMA. They used S&P 500 equity index data for the predictions and used almost 31 years of historical data. The goal was to create a portfolio strategy using four selected algorithmic strategies. All the strategies were compared with the benchmark buy&hold. The paper showed that ARIMA did not perform well when compared to the Buy&Hold strategy, however the performance of ARIMA was high during the phases of high volatility.
+
+## Machine Learning Models
+
+Machine learning is an advanced approach based on artificial intelligence which can be used to forecast the stock market prices. In recent years, Recurrent Neural Networks (RNN) have started to be used more often for time series analysis. @rumelhart1986hinton made significant contributions to the field of RNN. Due to issues such as the vanishing gradient problem and the inability to effectively capture long-term dependencies, the development of RNNs faces certain limitations. @hochreiter1997long  proposed the architecture of the Long-Short-Term Memory (LSTM) model to tackle the vanishing gradient problem. This gives LSTM a huge advantage over RNN especially when it comes to time series analysis.
+
+@siami2018comparison compared the use of LSTM and ARIMA in forecasting time series. They used them to predict the monthly closing prices for eleven stock market indices. In comparison to ARIMA, they conclude that LSTM outperforms the ARIMA model, what results in RMSE measure lower by 85%. Furthermore, they also mentioned that LSTM results were robust to the number of epochs sed in the process of estimation.
+
+@roondiwala2017predicting presented a study predicting the stock prices using LSTM. Five years of historical data of NIFTY 50 index was used for testing purposes. The training of LSTM models was done by allocating random weights and biases with an architecture of two LSTM layers and two dense layers with ReLU and Linear activation function respectively. Finally, the predicted values were compared with the actual values and evaluated using the RMSE. The best RMSE score was given for the model with High/Low/Open/Close as the inputs with 500 training epochs. 
+
+@michankow2022lstm presented a study on using LSTM in Algorithmic Investment Strategies (AIS) on BTC and S&P500 Index. The output of their model was a singular value predicting the next day return value -1, 0, 1. The set of hyperparameters used for the tuning process, relating to this paper, were the number of layer between 1 and 5, number of neurons in each layer chosen between 5 and 512, dropout rates between 0.001 and 0.2, several types of optimizers including SGD, RMSProp, and Adam variants, learning rates chosen between 0.001 and 0.1, and the batch size ranging from 16 to the length of the test size. After the hyperparameters tunning phase, they selected the model with 3 hidden layers, with 512/256/128 neurons respectively, dropout rate equal to 0.02, Adam as an optimizer a learning rate of 0.00015 and a batch size of 80. They deduced that when it comes to daily frequency, their model for S&P 500 equity index performed well for the Long-Only strategy, while the model for BTC performed well for both the Long-Only Long-Short strategy. 
+
+@zhang2019lstm wrote analyzed on Attention-based LSTM model for financial time series prediction (AT-LSTM). Instead of making their prediction of LSTM by inputting the prediction of ARIMA, the authors use the output of the attention model as the input of LSTM. The authors, compared the results of AT-LSTM with ARIMA and LSTM. The testing and training was done on three data sets: Russell 2000, DIJA, and NASDAQ indices and the best model was concluded based on the MAPE (mean absolute percentage error). LSTM performed the best with 2 layers, 8 hidden neurons, 20 training time steps, batch size equals to 50, and 5000 epochs. Finally, the authors summarized that the hybrid AT-LSTM performed better than LSTM and both of them performed way better than ARIMA. 
+
+@baranochnikov2022comparison analzyed various architecturs of LSTM and GRU models in Algorithmic Investment Strategies. Their LSTM model forecasted the rate of return for the period T+1. The authors decided to use the set of parameters chosen from the financial literature. Ten model architectures were used during the training process and parameters such as dropout rate, batch size, epochs, and the learning rates were additionally modified. Adam optimizer with the AMSGrad extension were used in all. The authors used the walk-forward process for estimation purposes. The models were tested on Bitcoin, Tesla, Brent Oil, an Gold closing prices.The authors deduced that the LSTM outperformed the traditional Buy&Hold strategy for Bitcoin and Tesla both for daily and hourly frequency. 
+
+Another research was conducted in India by @hiransha2018nse who predicted the National Stock Market of India and New York Stock Exchange using various algorithms such as MLP, RNN, LSTM, and CNN. ARIMA was used as benchamrk. The authors tested three sectors of industries, automobile, finance, and IT from both stock exchanges and measured the accuracy of the predictions using the MAPE metric. The authors concluded that CNN (Convolution Neural Network) outperformed all the other models and that LSTM was better performing than ARIMA due to its useful capability of finding non-linearity.
+
+@kijewski2020predicting predicted the S&P 500 equity index prices using the classical models and RNN (Recurrent Neural Networks including ARIMA, MA, momentum and contrarian, volatility breakout, macro factor, and finlly LSTM. The model were trained and tested collectively on a twenty year period. The range of parameters taken for ARIMA model were, p: 0-5, d: 0-3, q: 0-5, while in case of LSTM, a prepared set of hyperparameters was taken from the literature. They mentioned that the best LSTM model had the following configuration: 30 neurons in the hidden layers with ReLU activation, length of sequence equaling 15 and dropout rate 0.02 by using Adam optimizer with learning rate 0.01 and loss function Mean Square Error. The authors concluded that LSTM outperformed ARIMA and benchmark buy&hold strategy. 
+
+@krynska2022daily tested several architectures of the LSTM model in AIS based on S&P 500 equity index and BTC. They tested three frequencies of data: daily, hourly, and 15-minute of S&P 500 and BTC. When the model was considering a regression problem, models on daily data performed better than intraday frequencies. However, in case of classification problems, model on intraday data performed the best.
+
+@nelson2017stock used LSTM to predict the stock market direction. The authors use different stocks from the Brazilian stock exchange and some technical indicators as inputs. Furthermore, log-return transformation was performed for the inputs and the frequency of data was 15 minutes. The output of the model is a binary value (1, 0) denoting increase and decrease in the prices between the time steps. Four metrics were created to evaluate the performance, among which were the accuracy and the precision. The authors concluded that the proposed model of the paper outperforms the benchmark Buy&Hold strategy based on the accuracy and offers less riskier investment compared to the others. 
+
+## Hybrid Models
+
+Hybrid models is a combination of two models. A mix of models may work better together as they capture the nefficiencies of individual models. For instance LSTM-ARIMA models can help us capture the linear and non-linear dependencies in the data. Most algorithms can be combined with another. One of the common combination is a mixture of ARIMA and GARCH model. @vo2022applying tested a hybrid ARIMA-SGARCH model in algorithmic investment strategies (AIS). Three models were created during their research: ARIMA, ARIMA-SGARCH, ARIMA-EGARCH. The models were tested on S&P 500 equity index and prices in the period of the last 20 years. The authors selected the best ARIMA model using the Akaike Information Criterion (AIC). The results were compared between the models and the benchmark buy&hold strategy. Several performance metrics were used. The authors concluded that the ARIMA-SGARCH model performed the best, followed by ARIMA which performed better than the benchmark. 
+
+@senneset2020something use ARIMA and LSTM together to increase their portfolio stability. They use several stocks from the Oslo stock exchange for the period of 14 years. The authors used the residual values from ARIMA as an input and the performance was compared using the RMSE and MAE error metrics. During the research, two hybrid model were created: ARIMA-RandomForest and ARIMA-LSTM. The results concluded that ARIMA-RandomForest outperformed all the strategies, while ARIMA-LSTM outperformed just the benchmark strategy.
+
+LSTM-ARIMA was also considered in the approach to forecast the wind speed by @bali2020novel. A few wind parameters such as wind speed, temperature, pressure, and etc were used an inputs for LSTM. The authors compared the LSTM-ARIMA model with LSTM and the support vector machine (SVM) using the RMSE. They concluded that the LSTM-ARIMA was the most accurate model compared to LSTM and SVM.
+
+@arnob2019dhaka forecasted the Dhaka stock exchange (DSE), using the hybrid ARIMA-LSTM approach. The aim was to forecast the correlation coefficient between the asset. They used fifteen companies from DSE to forecast. Several ARIMA orders were chosen using the ACF and PACF plots; however, the best order was chosen based on the lowest AIC. The data was divided into three parts: train, test1, test2 and the performance was measured using MSE and MAE. The researchers concluded that ARIMA-LSTM performed better than the ARIMA model.
+
+@karim2022stock predicted the stock price of NIFTY-50 stock using a bidirectional LSTM and GRU network hybrid model (Bi-LSTM-GRU). The hybrid model was compared with each model being trained individually and the one with the highest precision was marked as the best. The authors concluded that their proposed hybrid approach outperformed the models individually.
+
+# Data Description
+
+We consider three equity indices in our research and the data is taken from yahoo finance using their *yfinance* API for Python. Table 1 presents the descriptive statistics of the chosen assets. Please note that the difference in the count value may arise due to the difference in the number of trading days in a year in each country.
+
+```{r descrip, results='asis'}
+df_descrip <- read.csv('./images/df_descrip.csv')
+
+kable(df_descrip, "pipe", col.names = c("", "Count", "Mean", "Standard Deviation", "Min", "25%", "50%", "75%", "Max"), align = "c",
+      caption = 'Descriptive Statistics for the closing price series.')
+```
+
+\vspace{-0.5cm}\noindent\linespread{0.65}\selectfont {\scriptsize \textbf{Note}: \textit{The descriptive statistics for S\&P 500, FTSE 100, and CAC 40 are calculated on the closing price in the period from 2000-01-03 for S\&P 500 and CAC 40 and 2000-01-04 for FTSE 100 until 2023-08-31.}}
+
+\linespread{1.5}\selectfont
+
+Figure 1 presents the prices of tested assets and their volatilities. For the S&P 500 equity index we use the CBOE's VIX as the measure of volatility and for FTSE 100 and CAC 40 equity index we use the annualized realized volatility with a historical window of 21 days, which is calculated using the following formula:
+
+$$
+annRV =  \sqrt{\frac{\sum_{i=21}^{N} R_t^2 }{N}} \times \sqrt{252} \tag{1}
+$$
+where: \newline
+$R_t$ - the daily returns \newline
+$t$ - the counter representing each trading day \newline
+$N$ - the number of trading days in our time frame 
+
+```{r fig1, fig.cap="Index values and the volatility.", fig.height=9, fig.width=10}
+SnP <- read.csv('./Images/df_SnP.csv')
+df_SnP <- data.frame(Date = as.Date(SnP$Date), Value = SnP$Close)
+SnP_VOL <- data.frame(Date = as.Date(SnP$Date), Value = SnP$Vix_Close)
+
+plot_SnP <- ggplot() + geom_line(data = df_SnP, aes(x = Date, y = Value), color = 'black') + xlab('Year') + theme(axis.title.y = element_blank(), axis.title.x = element_blank())
+plot_SnP_vol <- ggplot() + geom_line(data = SnP_VOL, aes(x = Date, y = Value), color = 'black') + xlab('Year') + theme(axis.title.y = element_blank(), axis.title.x = element_blank())
+
+FTSE <- read.csv('./Images/df_FTSE.csv')
+df_FTSE <- data.frame(Date = as.Date(FTSE$Date), Value = FTSE$Close)
+FTSE_VOL <- data.frame(Date = as.Date(FTSE$Date), Value = FTSE$Volatility)
+
+plot_FTSE <- ggplot() + geom_line(data = df_FTSE, aes(x = Date, y = Value), color = 'black') + xlab('Year') + theme(axis.title.y = element_blank(), axis.title.x = element_blank())
+plot_FTSE_vol <- ggplot() + geom_line(data = FTSE_VOL, aes(x = Date, y = Value), color = 'black') + xlab('Year') + theme(axis.title.y = element_blank(), axis.title.x = element_blank())
+
+CAC <- read.csv('./Images/df_CAC.csv')
+df_CAC <- data.frame(Date = as.Date(CAC$Date), Value = CAC$Close)
+CAC_VOL <- data.frame(Date = as.Date(CAC$Date), Value = CAC$Volatility)
+
+plot_CAC <- ggplot() + geom_line(data = df_CAC, aes(x = Date, y = Value), color = 'black') + xlab('Year') + theme(axis.title.y = element_blank(), axis.title.x = element_blank())
+plot_CAC_vol <- ggplot() + geom_line(data = CAC_VOL, aes(x = Date, y = Value), color = 'black') + xlab('Year') + theme(axis.title.y = element_blank(), axis.title.x = element_blank())
+
+grid.arrange(plot_SnP, plot_SnP_vol, plot_FTSE, plot_FTSE_vol, plot_CAC, plot_CAC_vol, ncol=2, nrow=3)
+
+```
+
+\vspace{-0.5cm}\noindent\linespread{0.65}\selectfont{\scriptsize\textbf{Note}: \textit{Each plot on the left shows the behavior of the index based on their closing price and each plot on the right represent the volatility for the corresponding index. Note that for S\&P 500, CBOE's VIX has been used as a measure of volatility and for the FTSE 100 and CAC 40, the realized volatility was used with a window of 21 trading days.}} 
+
+\linespread{1.5}\selectfont
+
+# Methodology
+## ARIMA
+
+Autoregressive Integrated Moving Average model (ARIMA), is an econometric model used for forecasting time series data based on some historical data. The model was introduced by George Box and Gwilym Jenkins in 1976, and they initially used it to model changes in financial time series data. The model consists of three parts: Autoregressive (AR), Integrated (I), and Moving Average (MA), where each component has its own order.Let's denote *p*, an order for *AR* component, *d*, an order for *I* component, and *q*, an order for *MA* component. Denoting this we can then write the model as *ARIMA(p,d,q)*. The respective orders determine the following properties of the model:
+
+-   *p* - the number of lagged observations
+-   *d* - the number of times the data was differenced
+-   *q* - the order of MA process
+
+In terms of stock forecasting, order *d* is usually set to 1 when we model the prices and 0 when we model the returns as the data is already stationary and then we have *ARMA(p,q)*. Figure 2 presents the difference between non-stationary data set which are the closing prices and stationary data set which are the first differences of prices.
+
+```{r fig4, fig.cap="Non-stationary data set compared to stationary data set of S&P 500.", fig.height=2}
+SnP_ARIMA <- read.csv('./Images/df_SnP.csv')
+SnP_ARIMA <- data.frame(Date = as.Date(SnP_ARIMA$Date), Value = SnP_ARIMA$Close)
+Diff <- diff(SnP_ARIMA$Value)
+SnP_ARIMA <- SnP_ARIMA[-1, ]
+SnP_ARIMA$Diff <- Diff
+
+plot_1 <- ggplot() + geom_line(data = SnP_ARIMA, aes(x = Date, y = Value), color = 'black') 
+plot_2 <- ggplot() + geom_line(data = SnP_ARIMA, aes(x = Date, y = Diff), color = 'black') 
+
+plot_1 <- plot_1 + theme(axis.title.y = element_blank(), axis.title.x = element_blank())
+plot_2 <- plot_2 + theme(axis.title.y = element_blank(), axis.title.x = element_blank())
+
+grid.arrange(plot_1, plot_2, ncol=2) 
+```
+
+\vspace{-0.5cm}\noindent\linespread{0.65}\selectfont {\scriptsize \textbf{Note}: \textit{The plot on the left side show actual plot of S\&P 500 closing price and the plot on the left side shows the differentiated closing price.}}
+
+\linespread{1.5}\selectfont 
+
+\pagebreak
+
+Let's now look at the formal side of an ARIMA model. ARIMA generally is an extension of the ARMA model. The *AR(p)* can be denoted with the following equation:
+$$
+AR(p): y_t = \phi_1 y_{t-1} + \phi_2 y_{t-2} + ... + \phi_p y_{t-p} + \epsilon_t \tag{2}
+$$
+where: \newline
+$y_t$ - the value of the time series at time *t* \newline
+$\epsilon_t$ - the error term \newline
+$\phi$ - the coefficients that capture the relationship between the current observation and previous observations at a lag of *p*
+
+The autoregressive component is responsible for forecasting the chosen variable using the past value of the variable automatically. 
+
+The *AR(p)* model can be written as:
+$$
+AR(p): (1-\sum_{i=1}^{p}\phi_iL^i)y_t = c + \epsilon_t \tag{3}
+$$
+The second component that is responible for differencing can be denoted as *I(d)* and the presented as:
+$$
+I(d): (1-L)^d = \mu + \epsilon_t \tag{4}
+$$
+The third component, moving average, looks as follows:
+$$
+MA(q): y_t =  \mu + \epsilon_t + \theta_1 \epsilon_{t-1} + ... + \theta_q \epsilon_{t-q} \tag{5}
+$$
+where: \newline
+$\mu$ - the mean of the given series \newline
+$\theta_1\space...\space\theta_q$ - the respective weights for each error term $\epsilon_{t-1}\space...\space\epsilon_{t-q}$.
+
+This represents the moving average procedure with order *q*. Unlike *AR(p)*, the *MA(q)* uses the previous error terms for the regression. And using the lag operator, *MA(q)* may be denoted as:
+$$
+MA(q): y_t = \mu + (1+\sum_{i=1}^{q}\theta_iL^i)\epsilon_t \tag{6}
+$$
+Using the two component explained previously, we can find the *ARIMA(p,0,q)* model which is also known as *ARMA(p,q)* model. The equation of *ARMA(p,q)* looks as follows:
+$$
+ARMA(p,q): y_t = \phi_1y_{t-1} + \phi_2y_{t-} + ... + \phi_py_{t-p} + \epsilon_t - \theta_1\epsilon_{t-1} + ... - \theta_q\epsilon_{t-q} \tag{7}
+$$
+The final *ARIMA(p,d,q)*  can be written as:
+$$
+ARIMA(p,d,q): (1-\sum_{i=1}^{p}\phi_iL^i)(1-L)^dy_t = c + (1+\sum_{i=1}^{q}\theta_iL^i)\epsilon_t \tag{8}
+$$
+where: \newline
+$d$ - the number of times the series was differenced.
+
+## RNN 
+According to @rnnTuring, a job platform, a recurrent neural network (RNN) is a variation of artificial neural networks (ANN). RNN may be used to address various problems such as speech recognition or image captioning. What differentiates RNN from ANN is that ANN just takes the inputs and generates outputs; however, RNN learns from the previously generated outputs in order to provide results for the next time stamp. Another advantage of RNN is that it has a memory cell which continues the calculations and if the forecast is inaccurate the network auto-learns and execute backpropagation to get the correct result. RNN is very effective for time series forecasting due to its ability to recollect previous inputs. This where the Long-Short-term memory (LSTM) model comes in.
+
+### LSTM
+LSTM is a special type of RNN. Its main character is the ability handle long term data dependencies and pushing the outcome to the succeeding node more efficiently. It also addresses the vanishing gradient problem, a known issue with RNN, which is tackled by disregarding nugatory information using its forget gate. LSTM also deals well with long term dependencies i.e. with problems where the output is dependent on the historical inputs. LSTM consists of multiple gates, each having an essential task to be done to have positive results. 
+
+Figure 3 presents LSTM which has four gates: input, output, forget, and change. For a sequence in time $t - (x_1, x_2,...,x_n )$ the forget gate $f_t$ takes the $x_t$ and the hidden state $h_{t-1}$ and produces a binary output 0 and 1 through a sigmoid function and identifies which information should be discarded from the memory cell $c_{t-1}$. The value equal to 1 is forwarded to the cell with the value equal to 0 and all the other information is forgotten. The input gate $i_t$ identifies what to update from the change gate $\hat{c}_{t}$ and the output gate $o_t$ decides which information should be taken from the current cell. From the sequence $X$, two sequences $x$ and $y$ are created where $x$ is the input sequence and $y$ is the next day closing price. Furthermore, it's worth noting that the memory cell is responsible for the long term memory and it updates the input gate, forget gate and the change gate. On the other hand, the hidden state is responsible for the short term memory and is updated by the output gate and the memory cell. The explanation above was influenced by @bhandari2022predicting research on 'Predicting stock market index using LSTM'.
+
+```{r LSTM_, out.width="70%", fig.align='center', fig.cap='The architecture of Long-Short-term memory.'}
+knitr::include_graphics("./Images/LSTM.png")
+```
+\begin{center}
+\vspace{-0.6cm}\noindent\linespread{0.65}\selectfont {\scriptsize \textbf{Note}: \textit{The architecture of LSTM, source: https://www.sciencedirect.com/science/article/pii/S2666827022000378.}}
+\end{center}
+\linespread{1.5}\selectfont
+
+The mathematical equations to the previously given terminologies looks as follows: 
+$$
+i_t = \sigma(W_ix_t\space+\space W_{hi}h_{t-1}\space+\space b_i) \tag{9}
+$$
+$$
+f_t = \sigma(W_fx_t\space+\space W_{hf}h_{t-1}\space+\space b_f) \tag{10}
+$$
+$$
+o_t = \sigma(W_ox_t\space+\space W_{ho}h_{t-1}\space+\space b_o) \tag{11}
+$$
+$$
+\hat{c}_t = tanh(W_cx_t\space+\space W_{hx}h_{t-1}\space+\space b_c) \tag{12}
+$$
+$$
+c_t = f_t \cdot c_{t-1} \space+\space i_t \cdot \hat{c}_t \tag{13}
+$$
+$$
+h_t = o_t \cdot tanh(c_t) \tag{14}
+$$
+where: \newline
+$W$ - weights \newline
+$b$ - biases
+
+## LSTM-ARIMA
+
+In this paper, we introduce a hybrid approach using the ARIMA and LSTM model collectively. This model contains an LSTM input layer which is fed with the residuals of ARIMA predictions and other inputs such as the closing price and the volatility. LSTM-ARIMA is a combination that helps capture both the linear and non-linear properties of the data. Moreover, LSTM is known for its outstanding capability to capture the long-term dependencies in time series data and ARIMA is known for its outstanding capability to capture the short-term dependencies in time series data. Additionally, ARIMA learns from data using statistical methods and LSTM learns by looking at the pattern thanks to the neural networks. Considering all of the above strengths and weaknesses of the models, we believe that collectively they may outperform the performance of both individually. Generally, the process of using LSTM-ARIMA approach for AIS in this paper can be summarized in the following way:
+
+1. Find the best fitted ARIMA model using the set of orders based on the smallest Akaike information criterion (AIC).
+2. Get the residuals from ARIMA.
+3. Perform feature engineering on LSTM, taking into the consideration the residuals by ARIMA, the closing price, and the realized volatility of the asset under consideration (in the case of S&P 500, take VIX).
+4. Conduct random search and choose the *best set of hyperparameters* based on the criteria outlined in the subsequent sections.
+5. Fit the best model and execute predictions for buy/sell signals generations.
+6. Create the equity curve based on investment signals from the previous point and then compute the performance metrics.
+
+## Walk Forward Optimization
+Over-fitting is a big risk in machine learning algorithms, especially in financial time series forecasting. Common cross validation techniques like *k-fold* are not well suited for financial analysis and adjusting the hyperparameters may result in over-fitting. Common cross-validation techniques sometimes do not performs as well as intended.Therefore, in order to have a robust trading strategy it is advised to use the walk-forward optimization (WFO) approach. Carta et al. (2021) stated that walk-forward optimization is one of the most popular validation techniques used by financial researchers to undergo decision making for trading. There are two types of WFO: anchored, and non-anchored. The difference lies that in anchored WFO each walk has a common beginning point; however, in the non-anchored type each walk has different starting point but the same length. In this research, we considered the non-anchored type for training, validation, and testing as we believe its robustness is higher than the anchored type. We set the in-sample (IS) window to 1250 trading days where the training set is equal to 1000 trading and the validation set is equal to 250 trading days and we set the out-of-sample (OOS) window to 250 trading days. This can be visualized in Figure 4.
+
+```{r WFO, out.width="95%", out.height="60%",fig.align='center', fig.cap='Walk forward optimization scheme with 5-years IS and 1-year OOS.'}
+knitr::include_graphics("./Images/WFO.png")
+```
+\vspace{-0.5cm}\noindent\linespread{0.65}\selectfont {\scriptsize \textbf{Note}: \textit{The bars in green color represent the training data set, in yellow color represent the validation data set, in red color represent the out-of-sample testing data set, and the bars in the dark-red color represent the total out-of-sample data. This plot was designed by using the data for S\&P 500 equity index. However, it looks similar for FTSE 100 and CAC 40 equiy indices. Training window is 1000 trading days, validation and testing windows are 250 trading days each.}}
+
+\linespread{1.5}\selectfont
+
+\pagebreak
+
+## Performance Metrics 
+In order to assess and evaluate the robustness of the trading strategies created in this paper, we calculated the performance metrics based on Michańków et al. (2022) and Bui and Ślepaczuk (2021). The details are presented: \newline
+* Annualized Return Compounded $(ARC)$, it shows the rate of return that was annualized for the given strategy during the period of $(0,..,T)$. It is expressed in percentage. 
+$$
+ARC = (\space\prod_{t=1}^{N} \space (1+R_t)\space)^{\frac{252}{N}} - 1 \tag{15}
+$$
+where: \newline
+$R_t$ - the percentage rate of return \newline
+$N$ - the sample size
+
+$R_t$ is calculated in the following way:
+$$
+R_t = \frac{P_t - P_{t-1}}{P_{t-1}} \tag{16}
+$$
+where: \newline
+$P_t$ - the price at point $t$ \newline
+* Annualized Standard Deviation $(ASD)$ is a risk measure.
+$$
+ASD = \sqrt{252} \space\times\space \sqrt{\frac{1}{N-1}\sum_{t=1}^{N}\space(R_t\space - \bar{R})^2} \times 100\% \tag{17}
+$$
+where: \newline
+$R_t$ - the percentage rate of return \newline
+$\bar{R}$ - the mean rate of return \newline
+$N$ - the sample size
+
+$\bar{R}$ is calculated in the following way:
+$$
+\bar{R} = \frac{1}{N} \sum_{t=1}^{N} R_t \tag{18}
+$$
+* Maximum Drawdown $(MD)$ gives us the maximum percentage drawdown over the period of investment and is calculated as follows:
+$$
+MD(T) = \maximum_{\tau\in[0,T]} \space(\maximum_{t\in[0,\tau]}(R_{i,T}\space-\space R_{i,\tau})) \times 100\% \tag{19}
+$$
+* Maximum Loss Duration $(MLD)$ tell us about "the number of years between the previous local maximum to the forthcoming local maximum" (Michańków et al. (2022)) and is calculated as follows:
+$$
+MLD = max(\frac{m_j\space-\space m_i}{S}) \tag{20}
+$$
+* Information Ration $(IR^{*})$ describes the risk-adjusted return metric based on the relation between ARC to its ASD and is calculated as follows:
+$$
+IR^{*} = \frac{ARC}{ASD} \tag{21}
+$$
+* Modified Information Ratio $(IR^{**})$ is another more complex and comprehensive risk-adjusted return metric which we regard as the **most important** metric for the evaluation of strategies in this research and is calculated as follows:
+$$
+IR^{**} = IR^{*}\space\times\space ARC\space\times\space\frac{sign(ARC)}{MD} \tag{22}
+$$
+
+## Research Description
+In this study, we use random search for hyperparameter tuning conducted at each walk of WFO. The steps of the research are presented below:
+
+1. Select the asset and download the data for 1-day frequency using the *yfinance* Python API.
+2. Perform data cleansing and prepare the data for feature engineering. 
+3. Create a code that supports the whole study including the sensitivity analysis.
+4. Select the base model scenario for each model.
+5. Run random search and test the strategies.
+6. Generate prediction and take position based on the criteria presented in the next section.
+7. Create equity curves and calculate the performance metrics.
+8. Conduct a sensitivity analysis.
+9. Summarize the study with the best parameters.
+
+\pagebreak
+
+In Diagram 1, the steps can be visually represented to provide a clearer understanding.
+
+\begin{center}
+\noindent{\normalsize {Diagram 1}: {Research Description Flow Chart.}}
+\vspace{-0.5cm}
+```{r RESEARCH_DESCRIPTION, out.width="95%", out.height="80%",fig.align='center'}
+knitr::include_graphics("./Images/RESEARCH DESCRIPTION.png")
+```
+
+\vspace{-1cm}\noindent\linespread{0.65}\selectfont {\scriptsize \textbf{Note}: \textit{The diagram presents the process of research done in this study.}}
+\end{center}
+
+\linespread{1.5}\selectfont
+## Best Set of Hyperparameters Criteria
+In our research, we employ random search as a method of hyperparameter tunning. During random search, we select five models with the lowest validation loss. Then we calculate the $$IR2$$ on the training data set and the validation data set and then calculate the absolute value of their difference. The *best model* is the one with the lowest absolute value of the difference and where the $$IR2$$ for the validation data set was **NOT** equal to **zero**.
+
+\pagebreak
+
+## Strategy
+
+During this research, we considered two kinds of strategies to be evaluated: *Long-Only* and *Long-Short*. *Long-Only* is where we allow to open either ablong position (1) or hold no position (0). *Long-Short* is where we allow to open either a long position (1) or a short position (-1). The change for Long position in the both strategies happens whenever the predicted price of $t+1$ is higher than the price at time $t$ and we take Short position or hold no position whenever the predicted price of $t+1$ is lower than the price at time $t$. Note that at this step we already have the prediction generated and we use them to test the algorithm. Below we present the mathematical notation of the Long-Only and Long-Short stratgies.:
+$$
+Long-Only: \begin{cases}  
+Signal = 1 \space\space if \space\space P_{t+1} > P_{t} \\
+ Signal = 0 \space\space if \space\space P_{t+1} < P_{t}
+\end{cases} 
+\tag{23}
+$$
+$$
+Long-Short: \begin{cases}  
+Signal = 1 \space\space if \space\space P_{t+1} > P_{t} \\
+ Signal = -1 \space\space if \space\space P_{t+1} < P_{t}
+\end{cases} 
+\tag{24}
+$$
+where: \newline
+$P_{t+1}$ - the closing price at $t+1$ \newline
+$P_{t}$ - the closing prices at $t$ \newline
+$R_{t}^{t+1}$ - the predicted return between the $P_{t+1}$ and $P_{t}$.
+
+## hyperparameter Tunning 
+In this section we present to you the set of parameters that we use to employ random search. Out of all combinations we conduct 20 trials on a randomly chosen set. We perform the experiments in *python 3.8.15* using the *Tensorflow* library. For ARIMA, the whole process from model training, including all WFO walks, till generating the predictions for a single asset took us approximately 3 minutes, for LSTM approximately 3 hours, and for LSTM-ARIMA approximately 4 hours. Note that for all models, the IS window is equal to 1250 trading days and OOS window is equal to 250 trading days. By default we have set the number of epochs to 100. However, using the *Keras EarlyStop* function we optimize the number of epochs based on the validation loss while setting the patience to 10 epochs.
+
+### ARIMA
+
+The range of parameters that were selected keeping the other constant are:
+
+* *AR degree (p):* from 0 to 6
+* *Integrated degree (d):* 1, as we perform model training on closing prices
+* *MA degree (p):* from 0 to 6 
+
+The models are chosen based on the Akaike Information Criterion (AIC). The objective of AIC is to find a balanced model that does not loose a lot of information and is also accurate. AIC also penalizes the models with more beta-parameters. Therefore, the model with the lowest AIC is chosen. Based on @al2020forecasting, AIC is calculated in the following way, 
+$$
+AIC = - 2ln(\hat{l}) + 2k \tag{25} 
+$$
+where: \newline
+$k$ - the number of the parameters to be estimated}
+$l$ - the likelihood for the respective model
+
+### LSTM
+The set of hyperparameters chosen to perform random search, keeping the other constant, are the following:}
+
+* *Neurons:* [25, 50, 75, 100, 250, 500]
+* *Number of hidden layers:* [1, 2]
+* *Dropout rate:* 0.075
+* *Optimizer:* [Adam, Nadam, Adagrad]
+* *Learning rates:* [0.01, 0.0001]
+* *Loss Function:* Mean Square Error
+* *Batch size:* 32
+* *Sequence Length:* [7, 14, 21]
+
+The input layer activation function is set to *sigmoid* and the output layer activation function is set to *tanh*. The input layer was given the following variables: Closing price at time $t$, volatility at time $t$, and the trading volume at time $t$ to predict the closing price at time $t+sequence\_length$.
+
+### LSTM-ARIMA
+The set of hyperparameters for LSTM-ARIMA were the same as for ARIMA and LSTM individually. Firstly, random search is performed on ARIMA then it is trained and the predictions are produced. Then those prediction are added to of the LSTM model. The input layer used the following variables: the Closing price at time $t$, volatility at time $t$, trading volume at time $t$ and residuals generated using ARIMA at time $t$ to predict the closing price at time $t+sequence\_length$.
+
+# Empirical Results
+## Base case results
+We evaluate the effectiveness of our investment algorithm using out-of-sample data. The S\&P 500 equity index began trading on 2005-01-25, the FTSE 100 equity index on 2005-01-13, and the CAC 40 equity index on 2004-12-28, with the trading period continuing until 2023-08-30. Our primary performance evaluation metric is the Modified Information Ratio ($IR^{**}$), as outlined in *equation 20*. This metric offers a comprehensive assessment, encompassing factors such as annualized return compounded (ARC), return volatility (ASD), and the largest percentage loss experienced by the asset from its peak value before reaching a new peak (MD). This approach allows us to not only assess profitability but also the associated investment risk. For each equity index, we evaluate three algorithms, namely ARIMA, LSTM, and LSTM-ARIMA, by comparing them both among themselves and against the Buy\&Hold strategy. 
+
+The intervals of the walk-forward optimization process are uniform for all equity indices since they all involve daily frequency. The training period spans 1000 trading days, followed by 250 trading days validation period and a subsequent 250 trading days testing period. Additionally, we consider two strategies: "Long-Only," where only long positions are allowed, and "Long-Short," where both long and short positions are permitted. The research flow is also detailed in section *4.6* for reference.
+
+Figure 5, presents the S\&P 500 equity index equity curves of all the algorithms for both Long-Only and Long-Short strategies respectively and Table 2 presents the the performance metrics for S\&P 500 equity index.Based on the evaluation of $IR^{**}$ metrics for both the Long-Only and Long-Short strategies, it can be deduced that the LSTM-ARIMA algorithm outperformed the other algorithms. Additionally, it is noteworthy that all algorithms demonstrated robust performance during the economic downturn of 2008. Furthermore, a remarkable surge in performance is observed during the Covid-19 period in the Long-Short strategy, especially when employing the LSTM-ARIMA algorithm.
+
+```{r fig_1, fig.cap="The Long-Only and Long-Short Strategy on S&P 500", fig.width=10, fig.height=7, results='hide'}
+#...... S&P 500 Long-Only ..........#
+
+df_SnP_ARIMA_1 <- read.csv('../ARIMA/Results/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_SnP_ARIMA_1 <- data.frame(Date = as.Date(df_SnP_ARIMA_1$Date), Value = df_SnP_ARIMA_1$strategy)
+
+df_SnP_LSTM_1 <- read.csv('../LSTM/Results/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_SnP_LSTM_1 <- data.frame(Date = as.Date(df_SnP_LSTM_1$Date), Value = df_SnP_LSTM_1$strategy)
+
+df_SnP_ARIMA_LSTM_1 <- read.csv('../ARIMA-LSTM/Results/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_SnP_ARIMA_LSTM_1 <- data.frame(Date = as.Date(df_SnP_ARIMA_LSTM_1$Date), Value = df_SnP_ARIMA_LSTM_1$strategy)
+
+df_Benchmark_SnP <- read.csv('../ARIMA-LSTM/RESULTS/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_Benchmark_SnP <- data.frame(Date = as.Date(df_Benchmark_SnP$Date), Value = df_Benchmark_SnP$buy_n_hold)
+
+
+ec_base_model_SnP_LO <- ggplot() +
+  geom_line(data = df_Benchmark_SnP, aes(x = Date, y = Value, color = "S&P 500")) +
+  geom_line(data = df_SnP_ARIMA_1, aes(x = Date, y = Value, color = "ARIMA")) +
+  geom_line(data = df_SnP_LSTM_1, aes(x = Date, y = Value, color = "LSTM")) +
+  geom_line(data = df_SnP_ARIMA_LSTM_1, aes(x = Date, y = Value, color = "LSTM-ARIMA")) + #"ARIMA",
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("S&P 500", "ARIMA", "LSTM", "LSTM-ARIMA")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+    ) + ylab('Equity')
+
+#...... S&P 500 Long-Short ..........#
+df_SnP_ARIMA_LS_1 <- read.csv('../ARIMA/Results/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_SnP_ARIMA_LS_1 <- data.frame(Date = as.Date(df_SnP_ARIMA_LS_1$Date), Value = df_SnP_ARIMA_LS_1$strategy)
+
+df_SnP_LSTM_LS_1 <- read.csv('../LSTM/Results/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_SnP_LSTM_LS_1 <- data.frame(Date = as.Date(df_SnP_LSTM_LS_1$Date), Value = df_SnP_LSTM_LS_1$strategy)
+
+df_SnP_ARIMA_LSTM_LS_1 <- read.csv('../ARIMA-LSTM/Results/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_SnP_ARIMA_LSTM_LS_1 <- data.frame(Date = as.Date(df_SnP_ARIMA_LSTM_LS_1$Date), Value = df_SnP_ARIMA_LSTM_LS_1$strategy)
+
+df_Benchmark_LS_1_SnP <- read.csv('../ARIMA-LSTM/Results/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_Benchmark_LS_1_SnP <- data.frame(Date = as.Date(df_Benchmark_LS_1_SnP$Date), Value = df_Benchmark_LS_1_SnP$buy_n_hold)
+
+
+ec_base_model_LS_SnP <- ggplot() +
+  geom_line(data = df_Benchmark_LS_1_SnP, aes(x = Date, y = Value, color = "S&P 500")) +
+  geom_line(data = df_SnP_ARIMA_LS_1, aes(x = Date, y = Value, color = "ARIMA")) +
+  geom_line(data = df_SnP_LSTM_LS_1, aes(x = Date, y = Value, color = "LSTM")) +
+  geom_line(data = df_SnP_ARIMA_LSTM_LS_1, aes(x = Date, y = Value, color = "LSTM-ARIMA")) + # "S&P 500", "ARIMA", "LSTM", "LSTM-ARIMA"
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("S&P 500", "ARIMA", "LSTM", "LSTM-ARIMA")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+    ) + ylab('Equity')
+
+ec_base_model_SnP_LO <- ec_base_model_SnP_LO + theme(axis.title.x = element_blank(),
+                                               axis.title.y = element_blank())
+ec_base_model_LS_SnP <- ec_base_model_LS_SnP + theme(axis.title.x = element_blank(),
+                                               axis.title.y = element_blank())
+
+
+grid.arrange(ec_base_model_SnP_LO, ec_base_model_LS_SnP, nrow=2)
+
+```
+
+\vspace{-0.5cm}\noindent\linespread{0.65}\selectfont {\scriptsize \textbf{Note}: \textit{S\&P 500 is the Buy\&Hold Strategy. The first plot presents the equity curve for the Long-Only strategy and the second plot presents the equity curve for the Long-Short strategy. The trading starts from 2005-01-25. Each equity curve consists of daily frequency data. The transaction costs are 0.1\%.}}
+
+\linespread{1.5}\selectfont
+
+\renewcommand{\arraystretch}{0.75}
+\fontsize{10}{10.5}\selectfont
+```{r perf_metric_SnP_LO, results='asis', fig.align='center'}
+
+##### LONG-ONLY S&P500 #####
+perf_metrics_base_model_L_O <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/S&P 500/RANDOM_SEARCH_1/df_perf_metr_LO.csv')
+perf_metrics_base_model_L_O[is.na(perf_metrics_base_model_L_O)] <- ""
+
+##### LONG-SHORT S&P500 #####
+perf_metrics_base_model_LS <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/S&P 500/RANDOM_SEARCH_1/df_perf_metr_LS.csv')
+perf_metrics_base_model_LS[is.na(perf_metrics_base_model_LS)] <- ""
+
+perf_metrics_base_model_LO_LS_SnP <- bind_rows(perf_metrics_base_model_L_O, perf_metrics_base_model_LS)
+
+# Create a Markdown table
+kable(perf_metrics_base_model_LO_LS_SnP, format = "simple", col.names = c("" , "", "ARC(%)", "ASD(%)", "MD(%)", "MLD", "IR*(%)", "IR**(%)"), caption = 'Performance metrics for S&P 500')
+```
+
+\normalsize
+\vspace{-0.5cm}\noindent\linespread{0.65}\selectfont {\scriptsize \textbf{Note}: \textit{S\&P 500 represents the benchmark Buy\&Hold Strategy. Trading starts from 2005-01-25. The transaction costs are 0.1\%. The best strategy is the one that holds the highest Modified Information Ratio ($IR^{**}$). Columns with the best corresponding values are denoted in bold.}}
+
+\linespread{1.5}\selectfont
+
+\pagebreak 
+
+Figure 6 presents the equity curve of FTSE 100 equity index and Table 3 presents the performance metrics for FTSE 100 equity index. Based on the evaluation of $IR^{**}$ metrics for both the Long-Only and Long-Short strategies, it can be deduced that the LSTM-ARIMA algorithm outperformed the other algorithms for the FTSE 100 equity index. Evidently, both the Long-Only and Long-Short strategies, when executed with the LSTM-ARIMA algorithm, display a substantial peak in performance after the year 2020.
+
+```{r fig_2, fig.cap="The Long-Only and Long-Short Strategy on FTSE 100", fig.width=10, fig.height=7, results='hide'}
+#...... FTSE 100 Long-Only ..........#
+
+df_FTSE_ARIMA_1 <- read.csv('../ARIMA/Results/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_FTSE_ARIMA_1 <- data.frame(Date = as.Date(df_FTSE_ARIMA_1$Date), Value = df_FTSE_ARIMA_1$strategy)
+
+df_FTSE_LSTM_1 <- read.csv('../LSTM/Results/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_FTSE_LSTM_1 <- data.frame(Date = as.Date(df_FTSE_LSTM_1$Date), Value = df_FTSE_LSTM_1$strategy)
+
+df_FTSE_ARIMA_LSTM_1 <- read.csv('../ARIMA-LSTM/Results/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1A/Visualisations/df_EC_LO_MAIN.csv')
+df_FTSE_ARIMA_LSTM_1 <- data.frame(Date = as.Date(df_FTSE_ARIMA_LSTM_1$Date), Value = df_FTSE_ARIMA_LSTM_1$strategy)
+
+df_Benchmark_FTSE <- read.csv('../ARIMA-LSTM/RESULTS/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1A/Visualisations/df_EC_LO_MAIN.csv')
+df_Benchmark_FTSE <- data.frame(Date = as.Date(df_Benchmark_FTSE$Date), Value = df_Benchmark_FTSE$buy_n_hold)
+
+
+ec_base_model_FTSE_LO <- ggplot() +
+  geom_line(data = df_Benchmark_FTSE, aes(x = Date, y = Value, color = "FTSE 100")) +
+  geom_line(data = df_FTSE_ARIMA_1, aes(x = Date, y = Value, color = "ARIMA")) +
+  geom_line(data = df_FTSE_LSTM_1, aes(x = Date, y = Value, color = "LSTM")) +
+  geom_line(data = df_FTSE_ARIMA_LSTM_1, aes(x = Date, y = Value, color = "LSTM-ARIMA")) + 
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("FTSE 100", "ARIMA", "LSTM", "LSTM-ARIMA")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+    ) + ylab('Equity')
+
+#...... FTSE 100 Long-Short ..........#
+df_FTSE_ARIMA_LS_1 <- read.csv('../ARIMA/Results/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_FTSE_ARIMA_LS_1 <- data.frame(Date = as.Date(df_FTSE_ARIMA_LS_1$Date), Value = df_FTSE_ARIMA_LS_1$strategy)
+
+df_FTSE_LSTM_LS_1 <- read.csv('../LSTM/Results/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_FTSE_LSTM_LS_1 <- data.frame(Date = as.Date(df_FTSE_LSTM_LS_1$Date), Value = df_FTSE_LSTM_LS_1$strategy)
+
+df_FTSE_ARIMA_LSTM_LS_1 <- read.csv('../ARIMA-LSTM/Results/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1A/Visualisations/df_EC_LS_MAIN.csv')
+df_FTSE_ARIMA_LSTM_LS_1 <- data.frame(Date = as.Date(df_FTSE_ARIMA_LSTM_LS_1$Date), Value = df_FTSE_ARIMA_LSTM_LS_1$strategy)
+
+df_Benchmark_LS_1_FTSE <- read.csv('../ARIMA-LSTM/Results/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1A/Visualisations/df_EC_LS_MAIN.csv')
+df_Benchmark_LS_1_FTSE <- data.frame(Date = as.Date(df_Benchmark_LS_1_FTSE$Date), Value = df_Benchmark_LS_1_FTSE$buy_n_hold)
+
+
+ec_base_model_LS_FTSE <- ggplot() +
+  geom_line(data = df_Benchmark_LS_1_FTSE, aes(x = Date, y = Value, color = "FTSE 100")) +
+  geom_line(data = df_FTSE_ARIMA_LS_1, aes(x = Date, y = Value, color = "ARIMA")) +
+  geom_line(data = df_FTSE_LSTM_LS_1, aes(x = Date, y = Value, color = "LSTM")) +
+  geom_line(data = df_FTSE_ARIMA_LSTM_LS_1, aes(x = Date, y = Value, color = "LSTM-ARIMA")) + # "FTSE 100", "ARIMA", "LSTM", "LSTM-ARIMA"
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("FTSE 100", "ARIMA", "LSTM", "LSTM-ARIMA")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+    ) + ylab('Equity')
+
+ec_base_model_FTSE_LO <- ec_base_model_FTSE_LO + theme(axis.title.x = element_blank(),
+                                               axis.title.y = element_blank())
+ec_base_model_LS_FTSE <- ec_base_model_LS_FTSE + theme(axis.title.x = element_blank(),
+                                               axis.title.y = element_blank())
+
+
+grid.arrange(ec_base_model_FTSE_LO, ec_base_model_LS_FTSE, nrow=2)
+
+```
+
+\vspace{-0.5cm}\noindent\linespread{0.65}\selectfont {\scriptsize \textbf{Note}: \textit{FTSE 100 represents the benchmark Buy\&Hold Strategy. The first plot presents the equity curve for the Long-Only strategy and the second plot presents the equity curve for the Long-Short strategy. The trading starts from 2005-01-13. Each equity curve consists of daily frequency data. The transaction costs are 0.1\%.}}
+
+\linespread{1.5}\selectfont
+
+\pagebreak
+
+\renewcommand{\arraystretch}{0.75}
+\fontsize{10}{10.5}\selectfont 
+```{r perf_metric_FTSE_LO, results='asis'}
+##### LONG-ONLY FTSE100 #####
+perf_metrics_base_model_L_O <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/FTSE 100/RANDOM_SEARCH_1/df_perf_metr_LO.csv')
+perf_metrics_base_model_L_O[is.na(perf_metrics_base_model_L_O)] <- ""
+
+##### LONG-SHORT FTSE100 #####
+perf_metrics_base_model_LS <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/FTSE 100/RANDOM_SEARCH_1/df_perf_metr_LS.csv')
+perf_metrics_base_model_LS[is.na(perf_metrics_base_model_LS)] <- ""
+
+perf_metrics_base_model_LO_LS_FTSE <- bind_rows(perf_metrics_base_model_L_O, perf_metrics_base_model_LS)
+
+# Create a Markdown table
+kable(perf_metrics_base_model_LO_LS_FTSE, format = "simple", col.names = c("" , "", "ARC(%)", "ASD(%)", "MD(%)", "MLD", "IR*(%)", "IR**(%)"), caption = 'Performance metrics for FTSE 100', align = 'c')
+```
+
+\normalsize
+\vspace{-0.5cm}\noindent\linespread{0.65}\selectfont {\scriptsize \textbf{Note}: \textit{FTSE 100 represents the benchmark Buy\&Hold Strategy. Trading starts from 2005-01-13. The transaction costs are 0.1\%. The best strategy is the one that holds the highest Modified Information Ratio ($IR^{**}$). Columns with the best corresponding values are denoted in bold.}}
+
+\linespread{1.5}\selectfont
+
+Figure 7 presents the equity curve of CAC 40 equity index and Table 4 presents the performance metrics for CAC 40 equity index. Based on the evaluation of $IR^{**}$ metrics for both the Long-Only and Long-Short strategies, it can be deduced that the LSTM-ARIMA algorithm outperformed the other algorithms for the CAC 40 equity index. Furthermore, we noticed with both Lon-Only and Long-Short stratges, when executed with the LSTM-ARIMA algorith, a high peak during the post-Covid times.
+
+\pagebreak
+
+```{r fig_3, fig.cap="The Long-Only and Long-Short Strategy on CAC 40", fig.width=10, fig.height=7, results='hide'}
+#...... CAC 40 Long-Only ..........#
+
+df_CAC_ARIMA_1 <- read.csv('../ARIMA/Results/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_CAC_ARIMA_1 <- data.frame(Date = as.Date(df_CAC_ARIMA_1$Date), Value = df_CAC_ARIMA_1$strategy)
+
+df_CAC_LSTM_1 <- read.csv('../LSTM/Results/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_CAC_LSTM_1 <- data.frame(Date = as.Date(df_CAC_LSTM_1$Date), Value = df_CAC_LSTM_1$strategy)
+
+df_CAC_ARIMA_LSTM_1 <- read.csv('../ARIMA-LSTM/Results/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_CAC_ARIMA_LSTM_1 <- data.frame(Date = as.Date(df_CAC_ARIMA_LSTM_1$Date), Value = df_CAC_ARIMA_LSTM_1$strategy)
+
+df_Benchmark_CAC <- read.csv('../ARIMA-LSTM/RESULTS/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_Benchmark_CAC <- data.frame(Date = as.Date(df_Benchmark_CAC$Date), Value = df_Benchmark_CAC$buy_n_hold)
+
+
+ec_base_model_CAC_LO <- ggplot() +
+  geom_line(data = df_Benchmark_CAC, aes(x = Date, y = Value, color = "CAC 40")) +
+  geom_line(data = df_CAC_ARIMA_1, aes(x = Date, y = Value, color = "ARIMA")) +
+  geom_line(data = df_CAC_LSTM_1, aes(x = Date, y = Value, color = "LSTM")) +
+  geom_line(data = df_CAC_ARIMA_LSTM_1, aes(x = Date, y = Value, color = "LSTM-ARIMA")) + 
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("CAC 40", "ARIMA", "LSTM", "LSTM-ARIMA")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+    ) + ylab('Equity')
+
+#...... CAC 40 Long-Short ..........#
+df_CAC_ARIMA_LS_1 <- read.csv('../ARIMA/Results/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_CAC_ARIMA_LS_1 <- data.frame(Date = as.Date(df_CAC_ARIMA_LS_1$Date), Value = df_CAC_ARIMA_LS_1$strategy)
+
+df_CAC_LSTM_LS_1 <- read.csv('../LSTM/Results/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_CAC_LSTM_LS_1 <- data.frame(Date = as.Date(df_CAC_LSTM_LS_1$Date), Value = df_CAC_LSTM_LS_1$strategy)
+
+df_CAC_ARIMA_LSTM_LS_1 <- read.csv('../ARIMA-LSTM/Results/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_CAC_ARIMA_LSTM_LS_1 <- data.frame(Date = as.Date(df_CAC_ARIMA_LSTM_LS_1$Date), Value = df_CAC_ARIMA_LSTM_LS_1$strategy)
+
+df_Benchmark_LS_1_CAC <- read.csv('../ARIMA-LSTM/Results/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_Benchmark_LS_1_CAC <- data.frame(Date = as.Date(df_Benchmark_LS_1_CAC$Date), Value = df_Benchmark_LS_1_CAC$buy_n_hold)
+
+
+ec_base_model_LS_CAC <- ggplot() +
+  geom_line(data = df_Benchmark_LS_1_CAC, aes(x = Date, y = Value, color = "CAC 40")) +
+  geom_line(data = df_CAC_ARIMA_LS_1, aes(x = Date, y = Value, color = "ARIMA")) +
+  geom_line(data = df_CAC_LSTM_LS_1, aes(x = Date, y = Value, color = "LSTM")) +
+  geom_line(data = df_CAC_ARIMA_LSTM_LS_1, aes(x = Date, y = Value, color = "LSTM-ARIMA")) + # "CAC 40", "ARIMA", "LSTM", "LSTM-ARIMA"
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("CAC 40", "ARIMA", "LSTM", "LSTM-ARIMA")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+    ) + ylab('Equity')
+
+ec_base_model_CAC_LO <- ec_base_model_CAC_LO + theme(axis.title.x = element_blank(),
+                                               axis.title.y = element_blank())
+ec_base_model_LS_CAC <- ec_base_model_LS_CAC + theme(axis.title.x = element_blank(),
+                                               axis.title.y = element_blank())
+
+
+grid.arrange(ec_base_model_CAC_LO, ec_base_model_LS_CAC, nrow=2)
+
+```
+
+\vspace{-0.5cm}\noindent\linespread{0.65}\selectfont {\scriptsize \textbf{Note}: \textit{CAC 40 represents the benchmark Buy\&Hold Strategy. The first plot presents the equity curve for the Long-Only strategy and the second plot presents the equity curve for the Long-Short strategy. The trading starts from 2004-12-28. Each equity curve consists of daily frequency data. The transaction costs are 0.1\%.}}
+
+\linespread{1.5}\selectfont
+
+\renewcommand{\arraystretch}{0.75}
+\fontsize{10}{10.5}\selectfont
+```{r perf_metric_CAC_LO, results='asis'}
+##### LONG-ONLY CAC40 #####
+perf_metrics_base_model_L_O <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/CAC 40/RANDOM_SEARCH_1/df_perf_metr_LO.csv')
+perf_metrics_base_model_L_O[is.na(perf_metrics_base_model_L_O)] <- ""
+
+##### LONG-SHORT CAC40 #####
+perf_metrics_base_model_LS <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/CAC 40/RANDOM_SEARCH_1/df_perf_metr_LS.csv')
+perf_metrics_base_model_LS[is.na(perf_metrics_base_model_LS)] <- ""
+
+perf_metrics_base_model_LO_LS_CAC <- bind_rows(perf_metrics_base_model_L_O, perf_metrics_base_model_LS)
+
+# Create a Markdown table
+kable(perf_metrics_base_model_LO_LS_CAC, format = "simple", col.names = c("" , "", "ARC(%)", "ASD(%)", "MD(%)", "MLD", "IR*(%)", "IR**(%)"), caption = 'Performance statistics for CAC 40', align = 'c')
+```
+
+\normalsize
+\vspace{-0.5cm}\noindent\linespread{0.65}\selectfont {\scriptsize \textbf{Note}: \textit{CAC 40 represents the benchmark Buy\&Hold Strategy. Trading starts from 2004-12-28. The transaction costs are 0.1\%. The best strategy is the one that holds the highest Modified Information Ratio ($IR^{**}$). Columns with the best corresponding values are denoted in bold.}}
+
+\linespread{1.5}\selectfont
+
+\pagebreak
+
+## Summary
+
+Based on the results presented in Table 2, we conclude that in the case of the S\&P 500 equity index **Long-Short Strategy for LSTM-ARIMA algorithm** outperforms all the other strategies with a modified information ratio of *7.18%* and annualized returns compounded equal to *8.92%*. In the case of FTSE 100 equity index (Table 3)  **LSTM-ARIMA with Long-Short Strategy** obtained the best results with an $IR^{**}$ of *16.65%* and $ARC$ equal to *10.98%*. Finally, in the case of CAC 40 equity index (Table 4), **LSTM-ARIMA with Long-Short Strategy** obtained the best results with an $IR^{**}$ of *14.29%* and $ARC$ equal to *11.06%*. We can see that our novel LSTM-ARIMA algorithm outperformed all the other algorithms for both Long-Only and Long-Short strategies and for all the equity indices.
+
+# Sensitivity Analysis
+This section is specifically focused on addressing the third research question (*RQ3*). Its primary objective is to investigate how changes in a specific input factor influence the output. Through this assessment, we are able to evaluate the stability and reliability of our investment algorithm. In case of the ARIMA model, we alter the following parameters: 
+
+* *the range of ARIMA model order:* (p, d, q) = (0-3, 1, 0-3)
+* *the information criterion*: Bayesian Information Criterion (BIC)
+
+The following parameters are altered for LSTM and LSTM-ARIMA:}
+
+* *the Dropout Rate:* 0.05, 0.1
+* *the batch size:* 16, 64
+
+During the sensitivity analysis, only the parameters mentioned are changed and everything else is kept as they were. We continue to use the modified information ratio ($IR^{**}$) as the main evaluation metric. Additionally, this section is divided into three subsections in accordance with out algorithms.
+
+\pagebreak 
+
+## ARIMA
+
+Figure 8 and Table 5 present the sensitivity analysis results for S\&P 500, FTSE 100, and CAC 40 equity indices. In case of the S\&P 500 equity index, based on the $IR^{**}$ metrics, the base case outperforms all the other changes in parameter for the Long-Only strategy. However, under the Long-Short strategy, we notice enhancements in the results when employing the Bayesian Information Criterion (BIC) as the information criterion. In case of the FTSE 100 equity index, the performance of the ARIMA model appears to be poor. Albeit, for the Long-Short strategy, improvements were seen when narrowing the the range of the orders. The model's performance benefited from this adjustment, possibly suggesting that high order configurations may have been predisposed to overfitting. In case of the CAC 40 equity index, the changes in the parameters do not yield improved results. The Buy\&Hold still outperforms the ARIMA model.
+
+In summary, the results of the ARIMA model used in our algorithmic investment strategy exhibit robustness to changes in the information criterion and the order range setting of the model.
+
+\pagebreak
+
+```{r SENS ARIMA ALL INDICES, results='hide', fig.cap = "ARIMA Sensitivity Analaysis", fig.width=12, fig.height=12}
+#...... S&P 500 Long-Only ..........#
+
+df_SnP_LSTM_1 <- read.csv('../ARIMA/Results/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_SnP_LSTM_1 <- data.frame(Date = as.Date(df_SnP_LSTM_1$Date), Value = df_SnP_LSTM_1$strategy)
+
+df_Benchmark_SnP <- read.csv('../ARIMA-LSTM/RESULTS/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_Benchmark_SnP <- data.frame(Date = as.Date(df_Benchmark_SnP$Date), Value = df_Benchmark_SnP$buy_n_hold)
+
+df_SnP_LSTM_SENS_B <- read.csv('../ARIMA/Results/S&P500/Sensitivity Analysis/SENS_B/Visualisations/df_EC_LO_MAIN.csv')
+df_SnP_LSTM_SENS_B <- data.frame(Date = as.Date(df_SnP_LSTM_SENS_B$Date), Value = df_SnP_LSTM_SENS_B$strategy)
+
+df_SnP_LSTM_SENS_C<- read.csv('../ARIMA/Results/S&P500/Sensitivity Analysis/SENS_C/Visualisations/df_EC_LO_MAIN.csv')
+df_SnP_LSTM_SENS_C <- data.frame(Date = as.Date(df_SnP_LSTM_SENS_C$Date), Value = df_SnP_LSTM_SENS_C$strategy)
+
+ec_base_model_SnP_LO_SENS_ARIMA <- ggplot() +
+  geom_line(data = df_Benchmark_SnP, aes(x = Date, y = Value, color = "S&P 500")) +
+  geom_line(data = df_SnP_LSTM_1, aes(x = Date, y = Value, color = "Base Case")) +
+  geom_line(data = df_SnP_LSTM_SENS_B, aes(x = Date, y = Value, color = "Order Range = {0-3,1,0-3}")) +
+  geom_line(data = df_SnP_LSTM_SENS_C, aes(x = Date, y = Value, color = "Information Criterion = BIC")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("S&P 500", "Base Case", "Order Range = {0-3,1,0-3}", "Information Criterion = BIC")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+#...... S&P 500 Long-Short ..........#
+df_SnP_LSTM_LS_1 <- read.csv('../ARIMA/Results/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_SnP_LSTM_LS_1 <- data.frame(Date = as.Date(df_SnP_LSTM_LS_1$Date), Value = df_SnP_LSTM_LS_1$strategy)
+
+df_Benchmark_LS_1_SnP <- read.csv('../ARIMA-LSTM/Results/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_Benchmark_LS_1_SnP <- data.frame(Date = as.Date(df_Benchmark_LS_1_SnP$Date), Value = df_Benchmark_LS_1_SnP$buy_n_hold)
+
+df_SnP_LSTM_SENS_B_LS <- read.csv('../ARIMA/Results/S&P500/Sensitivity Analysis/SENS_B/Visualisations/df_EC_LS_MAIN.csv')
+df_SnP_LSTM_SENS_B_LS <- data.frame(Date = as.Date(df_SnP_LSTM_SENS_B_LS$Date), Value = df_SnP_LSTM_SENS_B_LS$strategy)
+
+df_SnP_LSTM_SENS_C_LS <- read.csv('../ARIMA/Results/S&P500/Sensitivity Analysis/SENS_C/Visualisations/df_EC_LS_MAIN.csv')
+df_SnP_LSTM_SENS_C_LS <- data.frame(Date = as.Date(df_SnP_LSTM_SENS_C_LS$Date), Value = df_SnP_LSTM_SENS_C_LS$strategy)
+
+ec_base_model_SnP_LS_SENS_ARIMA <- ggplot() +
+  geom_line(data = df_Benchmark_LS_1_SnP, aes(x = Date, y = Value, color = "S&P 500")) +
+  geom_line(data = df_SnP_LSTM_LS_1, aes(x = Date, y = Value, color = "Base Case")) +
+  geom_line(data = df_SnP_LSTM_SENS_B_LS, aes(x = Date, y = Value, color = "Order Range = {0-3,1,0-3}")) +
+  geom_line(data = df_SnP_LSTM_SENS_C_LS, aes(x = Date, y = Value, color = "Information Criterion = BIC")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("S&P 500", "Base Case",  "Order Range = {0-3,1,0-3}", "Information Criterion = BIC")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+
+#...... FTSE 100 Long-Only ..........#
+
+df_FTSE_LSTM_1 <- read.csv('../ARIMA/Results/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_FTSE_LSTM_1 <- data.frame(Date = as.Date(df_FTSE_LSTM_1$Date), Value = df_FTSE_LSTM_1$strategy)
+
+df_Benchmark_FTSE <- read.csv('../ARIMA-LSTM/RESULTS/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1A/Visualisations/df_EC_LO_MAIN.csv')
+df_Benchmark_FTSE <- data.frame(Date = as.Date(df_Benchmark_FTSE$Date), Value = df_Benchmark_FTSE$buy_n_hold)
+
+df_FTSE_LSTM_SENS_B <- read.csv('../ARIMA/Results/FTSE100/Sensitivity Analysis/SENS_B/Visualisations/df_EC_LO_MAIN.csv')
+df_FTSE_LSTM_SENS_B <- data.frame(Date = as.Date(df_FTSE_LSTM_SENS_B$Date), Value = df_FTSE_LSTM_SENS_B$strategy)
+
+df_FTSE_LSTM_SENS_C<- read.csv('../ARIMA/Results/FTSE100/Sensitivity Analysis/SENS_C/Visualisations/df_EC_LO_MAIN.csv')
+df_FTSE_LSTM_SENS_C <- data.frame(Date = as.Date(df_FTSE_LSTM_SENS_C$Date), Value = df_FTSE_LSTM_SENS_C$strategy)
+
+ec_base_model_FTSE_LO_SENS_ARIMA <- ggplot() +
+  geom_line(data = df_Benchmark_FTSE, aes(x = Date, y = Value, color = "FTSE 100")) +
+  geom_line(data = df_FTSE_LSTM_1, aes(x = Date, y = Value, color = "Base Case")) +
+  geom_line(data = df_FTSE_LSTM_SENS_B, aes(x = Date, y = Value, color = "Order Range = {0-3,1,0-3}")) +
+  geom_line(data = df_FTSE_LSTM_SENS_C, aes(x = Date, y = Value, color = "Information Criterion = BIC")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("FTSE 100", "Base Case",  "Order Range = {0-3,1,0-3}", "Information Criterion = BIC")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+#...... FTSE 100 Long-Short ..........#
+df_FTSE_LSTM_LS_1 <- read.csv('../ARIMA/Results/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_FTSE_LSTM_LS_1 <- data.frame(Date = as.Date(df_FTSE_LSTM_LS_1$Date), Value = df_FTSE_LSTM_LS_1$strategy)
+
+df_Benchmark_LS_1_FTSE <- read.csv('../ARIMA-LSTM/Results/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1A/Visualisations/df_EC_LS_MAIN.csv')
+df_Benchmark_LS_1_FTSE <- data.frame(Date = as.Date(df_Benchmark_LS_1_FTSE$Date), Value = df_Benchmark_LS_1_FTSE$buy_n_hold)
+
+df_FTSE_LSTM_SENS_B_LS <- read.csv('../ARIMA/Results/FTSE100/Sensitivity Analysis/SENS_B/Visualisations/df_EC_LS_MAIN.csv')
+df_FTSE_LSTM_SENS_B_LS <- data.frame(Date = as.Date(df_FTSE_LSTM_SENS_B_LS$Date), Value = df_FTSE_LSTM_SENS_B_LS$strategy)
+
+df_FTSE_LSTM_SENS_C_LS <- read.csv('../ARIMA/Results/FTSE100/Sensitivity Analysis/SENS_C/Visualisations/df_EC_LS_MAIN.csv')
+df_FTSE_LSTM_SENS_C_LS <- data.frame(Date = as.Date(df_FTSE_LSTM_SENS_C_LS$Date), Value = df_FTSE_LSTM_SENS_C_LS$strategy)
+
+ec_base_model_FTSE_LS_SENS_ARIMA <- ggplot() +
+  geom_line(data = df_Benchmark_LS_1_FTSE, aes(x = Date, y = Value, color = "FTSE 100")) +
+  geom_line(data = df_FTSE_LSTM_LS_1, aes(x = Date, y = Value, color = "Base Case")) +
+  geom_line(data = df_FTSE_LSTM_SENS_B_LS, aes(x = Date, y = Value, color = "Order Range = {0-3,1,0-3}")) +
+  geom_line(data = df_FTSE_LSTM_SENS_C_LS, aes(x = Date, y = Value, color = "Information Criterion = BIC")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("FTSE 100", "Base Case",  "Order Range = {0-3,1,0-3}", "Information Criterion = BIC")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+ec_base_model_SnP_LO_SENS_ARIMA <- ec_base_model_SnP_LO_SENS_ARIMA + theme(axis.title.x = element_blank(),
+                                                                           axis.title.y = element_blank())
+ec_base_model_SnP_LS_SENS_ARIMA <- ec_base_model_SnP_LS_SENS_ARIMA + theme(axis.title.x = element_blank(),
+                                                                           axis.title.y = element_blank())
+
+ec_base_model_FTSE_LO_SENS_ARIMA <- ec_base_model_FTSE_LO_SENS_ARIMA + theme(axis.title.x = element_blank(),
+                                                                             axis.title.y = element_blank())
+ec_base_model_FTSE_LS_SENS_ARIMA <- ec_base_model_FTSE_LS_SENS_ARIMA + theme(axis.title.x = element_blank(),
+                                                                             axis.title.y = element_blank())
+
+#...... CAC 40 Long-Only ..........#
+
+df_CAC_LSTM_1 <- read.csv('../ARIMA/Results/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_CAC_LSTM_1 <- data.frame(Date = as.Date(df_CAC_LSTM_1$Date), Value = df_CAC_LSTM_1$strategy)
+
+df_Benchmark_CAC <- read.csv('../ARIMA-LSTM/RESULTS/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_Benchmark_CAC <- data.frame(Date = as.Date(df_Benchmark_CAC$Date), Value = df_Benchmark_CAC$buy_n_hold)
+
+df_CAC_LSTM_SENS_B <- read.csv('../ARIMA/Results/CAC/Sensitivity Analysis/SENS_B/Visualisations/df_EC_LO_MAIN.csv')
+df_CAC_LSTM_SENS_B <- data.frame(Date = as.Date(df_CAC_LSTM_SENS_B$Date), Value = df_CAC_LSTM_SENS_B$strategy)
+
+df_CAC_LSTM_SENS_C<- read.csv('../ARIMA/Results/CAC/Sensitivity Analysis/SENS_C/Visualisations/df_EC_LO_MAIN.csv')
+df_CAC_LSTM_SENS_C <- data.frame(Date = as.Date(df_CAC_LSTM_SENS_C$Date), Value = df_CAC_LSTM_SENS_C$strategy)
+
+ec_base_model_CAC_LO_SENS_ARIMA <- ggplot() +
+  geom_line(data = df_Benchmark_CAC, aes(x = Date, y = Value, color = "CAC 40")) +
+  geom_line(data = df_CAC_LSTM_1, aes(x = Date, y = Value, color = "Base Case")) +
+  geom_line(data = df_CAC_LSTM_SENS_B, aes(x = Date, y = Value, color = "Order Range = {0-3,1,0-3}")) +
+  geom_line(data = df_CAC_LSTM_SENS_C, aes(x = Date, y = Value, color = "Information Criterion = BIC")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("CAC 40", "Base Case",  "Order Range = {0-3,1,0-3}", "Information Criterion = BIC")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+#...... CAC 40 Long-Short ..........#
+df_CAC_LSTM_LS_1 <- read.csv('../ARIMA/Results/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_CAC_LSTM_LS_1 <- data.frame(Date = as.Date(df_CAC_LSTM_LS_1$Date), Value = df_CAC_LSTM_LS_1$strategy)
+
+df_Benchmark_LS_1_CAC <- read.csv('../ARIMA-LSTM/Results/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_Benchmark_LS_1_CAC <- data.frame(Date = as.Date(df_Benchmark_LS_1_CAC$Date), Value = df_Benchmark_LS_1_CAC$buy_n_hold)
+
+df_CAC_LSTM_SENS_B_LS <- read.csv('../ARIMA/Results/CAC/Sensitivity Analysis/SENS_B/Visualisations/df_EC_LS_MAIN.csv')
+df_CAC_LSTM_SENS_B_LS <- data.frame(Date = as.Date(df_CAC_LSTM_SENS_B_LS$Date), Value = df_CAC_LSTM_SENS_B_LS$strategy)
+
+df_CAC_LSTM_SENS_C_LS <- read.csv('../ARIMA/Results/CAC/Sensitivity Analysis/SENS_C/Visualisations/df_EC_LS_MAIN.csv')
+df_CAC_LSTM_SENS_C_LS <- data.frame(Date = as.Date(df_CAC_LSTM_SENS_C_LS$Date), Value = df_CAC_LSTM_SENS_C_LS$strategy)
+
+ec_base_model_CAC_LS_SENS_ARIMA <- ggplot() +
+  geom_line(data = df_Benchmark_LS_1_CAC, aes(x = Date, y = Value, color = "CAC 40")) +
+  geom_line(data = df_CAC_LSTM_LS_1, aes(x = Date, y = Value, color = "Base Case")) +
+  geom_line(data = df_CAC_LSTM_SENS_B_LS, aes(x = Date, y = Value, color = "Order Range = {0-3,1,0-3}")) +
+  geom_line(data = df_CAC_LSTM_SENS_C_LS, aes(x = Date, y = Value, color = "Information Criterion = BIC")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("CAC 40", "Base Case",  "Order Range = {0-3,1,0-3}", "Information Criterion = BIC")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+ec_base_model_CAC_LO_SENS_ARIMA <- ec_base_model_CAC_LO_SENS_ARIMA + theme(axis.title.x = element_blank(),
+                                                                           axis.title.y = element_blank())
+ec_base_model_CAC_LS_SENS_ARIMA <- ec_base_model_CAC_LS_SENS_ARIMA + theme(axis.title.x = element_blank(),
+                                                                           axis.title.y = element_blank())
+
+
+grid.arrange(ec_base_model_SnP_LO_SENS_ARIMA, ec_base_model_SnP_LS_SENS_ARIMA, ec_base_model_FTSE_LO_SENS_ARIMA, ec_base_model_FTSE_LS_SENS_ARIMA, ec_base_model_CAC_LO_SENS_ARIMA, ec_base_model_CAC_LS_SENS_ARIMA, ncol=2)
+```
+
+\vspace{-0.5cm}\noindent\linespread{0.65}\selectfont {\scriptsize \textbf{Note}: \textit{The figure presents the equity curves for the sensitivity analysis performed on the ARIMA model. S\&P 500, FTSE 100, and CAC 40 represents the benchmark Buy\&Hold strategy for each index respectively. The base case scenario utilizes the order range (p,d,q)=(0-6, 1, 0-6) and akaike information criterion (AIC). S\&P 500 index trading starts on 2005-01-25, FTSE 100 equity index trading starts on 2005-01-13, and CAC 40 equity index trading starts on 2004-12-28. Each equity curve consists of daily frequency data. The transaction costs are 0.1\%. The best values are in bold and are bolded with respect to the base case scenario.}}
+
+\linespread{1.5}\selectfont
+
+\pagebreak
+
+\renewcommand{\arraystretch}{0.75}
+\fontsize{10}{10.5}\selectfont
+```{r SENS_perf_metric__LO_LS _ARIMA_ for all indices, results='asis'}
+##### LONG-ONLY S&P500 #####
+perf_metrics_base_model_L_O_SnP <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/S&P 500/df_perf_metr_LO_ARIMA.csv')
+perf_metrics_base_model_L_O_SnP[is.na(perf_metrics_base_model_L_O_SnP)] <- ""
+
+##### LONG-SHORT S&P500 #####
+perf_metrics_base_model_LS_SnP <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/S&P 500/df_perf_metr_LS_ARIMA.csv')
+perf_metrics_base_model_LS_SnP[is.na(perf_metrics_base_model_LS_SnP)] <- ""
+
+##### LONG-ONLY FTSE100 #####
+perf_metrics_base_model_L_O_FTSE <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/FTSE 100/df_perf_metr_LO_ARIMA.csv')
+perf_metrics_base_model_L_O_FTSE[is.na(perf_metrics_base_model_L_O_FTSE)] <- ""
+
+##### LONG-SHORT FTSE100 #####
+perf_metrics_base_model_LS_FTSE <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/FTSE 100/df_perf_metr_LS_ARIMA.csv')
+perf_metrics_base_model_LS_FTSE[is.na(perf_metrics_base_model_LS_FTSE)] <- ""
+
+##### LONG-ONLY CAC40 #####
+perf_metrics_base_model_L_O_CAC <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/CAC 40/df_perf_metr_LO_ARIMA.csv')
+perf_metrics_base_model_L_O_CAC[is.na(perf_metrics_base_model_L_O_CAC)] <- ""
+
+##### LONG-SHORT CAC40 #####
+perf_metrics_base_model_LS_CAC <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/CAC 40/df_perf_metr_LS_ARIMA.csv')
+perf_metrics_base_model_LS_CAC[is.na(perf_metrics_base_model_LS_CAC)] <- ""
+
+perf_metrics_base_model_LO_LS <- bind_rows(perf_metrics_base_model_L_O_SnP, perf_metrics_base_model_LS_SnP, perf_metrics_base_model_L_O_FTSE, perf_metrics_base_model_LS_FTSE, perf_metrics_base_model_L_O_CAC, perf_metrics_base_model_LS_CAC)
+
+# Create a Markdown table
+kable(perf_metrics_base_model_LO_LS, format = "simple", col.names = c("" , "", "ARC(%)", "ASD(%)", "MD(%)", "MLD", "IR*(%)", "IR**(%)"), caption = 'ARIMA Sensitivity Analysis performance metrics', align = 'c')
+```
+
+\normalsize
+\vspace{-0.5cm}\noindent\linespread{0.65}\selectfont {\scriptsize \textbf{Note}: \textit{The table shows the performance metrics for the sensitivity analysis performed on the ARIMA model. S\&P 500, FTSE 100, and CAC 40 represents the benchmark Buy\&Hold strategy for each index respectively. S\&P 500 index trading starts on 2005-01-25, FTSE 100 equity index trading starts on 2005-01-13, and CAC 40 equity index trading starts on 2004-12-28. In the base case scenario, the Dropout rate is set to 0.075 and the Batch Size is set to 32. The transaction costs are 0.1\%. The best values are in bold and are bolded with respect to the base case scenario.}}
+
+\linespread{1.5}\selectfont
+
+\pagebreak
+
+## LSTM
+
+Figure 9 and Table 6 present the results of a sensitivity analysis conducted on the S\&P 500, FTSE 100, and CAC 40 equity indices using the LSTM model. In case of the S\&P 500 equity index (presented in Panel A and Panel C), it is observed that an increase in the dropout rate results in a higher modified information ratio ($IR^{**}$) for both the Long-Only and the Long-Short strategy. Additionally, as indicated in Panel B and Panel D, it is inferred that a smaller batch size yields a higher $IR^{**}$ for the Long-Only strategy, whereas for the Long-Short strategy smaller batch size made it significantly worse.
+
+In case of the FTSE 100 equity index, indicated in Panel E and Panel G, it is evident that smaller dropout rates yield better results in the case of the Long-Only strategy, while higher dropout rates are more effective for the Long-Short strategy. Furthermore, as indicated in Panel F and Panel H, it is apparent that the Long-Short strategy exhibits higher $IR^{**}$ when using a smaller batch size, while the Long-Only strategy achieves optimal perfomance when utilizing the base case scenario.
+
+In case of the CAC 40 equity index, presented in Panel I and Panel K indicates that a smaller dropout rate lead to a higher $IR^{**}$ for the Long-Only strategy. However, this trend is not observed for the Long-Short strategy, as the base case scenario continues to delver the best results. Furthermore, based on the observations in panel J and Panel L, it is noticed that a higher batch size results in a higher annualized returns compounded ($ARC$) for both the Long-Only and the Long-Short strategies. However, when considering the $IR^{**}$ metric, the improvement is only evident in the Long-Short strategy, whereas the Long-Only strategy achieves a higher $IR^{**}$ with a smaller batch size.
+
+\pagebreak
+
+```{r SENS LSTM, results='hide', fig.cap="LSTM Sensitivity Analysis for S&P 500", fig.width=10, fig.height=12}
+#...... S&P 500 Long-Only ..........#
+
+df_SnP_LSTM_1 <- read.csv('../LSTM/Results/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_SnP_LSTM_1 <- data.frame(Date = as.Date(df_SnP_LSTM_1$Date), Value = df_SnP_LSTM_1$strategy)
+
+df_Benchmark_SnP <- read.csv('../LSTM/RESULTS/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_Benchmark_SnP <- data.frame(Date = as.Date(df_Benchmark_SnP$Date), Value = df_Benchmark_SnP$buy_n_hold)
+
+df_SnP_LSTM_SENS_1 <- read.csv('../LSTM/Results/S&P500/Sensitivity Analysis/SENS_1/Visualisations/df_EC_LO_MAIN.csv')
+df_SnP_LSTM_SENS_1 <- data.frame(Date = as.Date(df_SnP_LSTM_SENS_1$Date), Value = df_SnP_LSTM_SENS_1$strategy)
+
+df_SnP_LSTM_SENS_1A <- read.csv('../LSTM/Results/S&P500/Sensitivity Analysis/SENS_1A/Visualisations/df_EC_LO_MAIN.csv')
+df_SnP_LSTM_SENS_1A <- data.frame(Date = as.Date(df_SnP_LSTM_SENS_1A$Date), Value = df_SnP_LSTM_SENS_1A$strategy)
+
+ec_base_model_SnP_LO_SENS_1 <- ggplot() +
+  geom_line(data = df_Benchmark_SnP, aes(x = Date, y = Value, color = "S&P 500")) +
+  geom_line(data = df_SnP_LSTM_1, aes(x = Date, y = Value, color = "Base Case Dropout = 0.075")) +
+  geom_line(data = df_SnP_LSTM_SENS_1, aes(x = Date, y = Value, color = "Dropout = 0.05")) +
+  geom_line(data = df_SnP_LSTM_SENS_1A, aes(x = Date, y = Value, color = "Dropout = 0.1")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("S&P 500", "Base Case Dropout = 0.075", "Dropout = 0.05", "Dropout = 0.1")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+#...... S&P 500 Long-Short ..........#
+df_SnP_LSTM_LS_1 <- read.csv('../LSTM/Results/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_SnP_LSTM_LS_1 <- data.frame(Date = as.Date(df_SnP_LSTM_LS_1$Date), Value = df_SnP_LSTM_LS_1$strategy)
+
+df_Benchmark_LS_1_SnP <- read.csv('../LSTM/Results/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_Benchmark_LS_1_SnP <- data.frame(Date = as.Date(df_Benchmark_LS_1_SnP$Date), Value = df_Benchmark_LS_1_SnP$buy_n_hold)
+
+df_SnP_LSTM_SENS_1_LS <- read.csv('../LSTM/Results/S&P500/Sensitivity Analysis/SENS_1/Visualisations/df_EC_LS_MAIN.csv')
+df_SnP_LSTM_SENS_1_LS <- data.frame(Date = as.Date(df_SnP_LSTM_SENS_1_LS$Date), Value = df_SnP_LSTM_SENS_1_LS$strategy)
+
+df_SnP_LSTM_SENS_1A_LS <- read.csv('../LSTM/Results/S&P500/Sensitivity Analysis/SENS_1A/Visualisations/df_EC_LS_MAIN.csv')
+df_SnP_LSTM_SENS_1A_LS <- data.frame(Date = as.Date(df_SnP_LSTM_SENS_1A_LS$Date), Value = df_SnP_LSTM_SENS_1A_LS$strategy)
+
+
+ec_base_model_SnP_LS_SENS_1 <- ggplot() +
+  geom_line(data = df_Benchmark_LS_1_SnP, aes(x = Date, y = Value, color = "S&P 500")) +
+  geom_line(data = df_SnP_LSTM_LS_1, aes(x = Date, y = Value, color = "Base Case Dropout = 0.075")) +
+  geom_line(data = df_SnP_LSTM_SENS_1_LS, aes(x = Date, y = Value, color = "Dropout = 0.05")) +
+  geom_line(data = df_SnP_LSTM_SENS_1A_LS, aes(x = Date, y = Value, color = "Dropout = 0.1")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("S&P 500", "Base Case Dropout = 0.075", "Dropout = 0.05", "Dropout = 0.1")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+
+#...... S&P 500 Long-Only ..........#
+
+df_SnP_LSTM_1 <- read.csv('../LSTM/Results/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_SnP_LSTM_1 <- data.frame(Date = as.Date(df_SnP_LSTM_1$Date), Value = df_SnP_LSTM_1$strategy)
+
+df_Benchmark_SnP <- read.csv('../LSTM/RESULTS/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_Benchmark_SnP <- data.frame(Date = as.Date(df_Benchmark_SnP$Date), Value = df_Benchmark_SnP$buy_n_hold)
+
+df_SnP_LSTM_SENS_2 <- read.csv('../LSTM/Results/S&P500/Sensitivity Analysis/SENS_2/Visualisations/df_EC_LO_MAIN.csv')
+df_SnP_LSTM_SENS_2 <- data.frame(Date = as.Date(df_SnP_LSTM_SENS_2$Date), Value = df_SnP_LSTM_SENS_2$strategy)
+
+df_SnP_LSTM_SENS_2A <- read.csv('../LSTM/Results/S&P500/Sensitivity Analysis/SENS_2A/Visualisations/df_EC_LO_MAIN.csv')
+df_SnP_LSTM_SENS_2A <- data.frame(Date = as.Date(df_SnP_LSTM_SENS_2A$Date), Value = df_SnP_LSTM_SENS_2A$strategy)
+
+ec_base_model_SnP_LO_SENS_2 <- ggplot() +
+  geom_line(data = df_Benchmark_SnP, aes(x = Date, y = Value, color = "S&P 500")) +
+  geom_line(data = df_SnP_LSTM_1, aes(x = Date, y = Value, color = "Base Case Batch Size = 32")) +
+  geom_line(data = df_SnP_LSTM_SENS_2, aes(x = Date, y = Value, color = "Batch Size = 16")) +
+  geom_line(data = df_SnP_LSTM_SENS_2A, aes(x = Date, y = Value, color = "Batch Size = 64")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("S&P 500", "Base Case Batch Size = 32", "Batch Size = 16", "Batch Size = 64")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+#...... S&P 500 Long-Short ..........#
+df_SnP_LSTM_LS_1 <- read.csv('../LSTM/Results/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_SnP_LSTM_LS_1 <- data.frame(Date = as.Date(df_SnP_LSTM_LS_1$Date), Value = df_SnP_LSTM_LS_1$strategy)
+
+df_Benchmark_LS_1_SnP <- read.csv('../LSTM/Results/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_Benchmark_LS_1_SnP <- data.frame(Date = as.Date(df_Benchmark_LS_1_SnP$Date), Value = df_Benchmark_LS_1_SnP$buy_n_hold)
+
+df_SnP_LSTM_SENS_2_LS <- read.csv('../LSTM/Results/S&P500/Sensitivity Analysis/SENS_2/Visualisations/df_EC_LS_MAIN.csv')
+df_SnP_LSTM_SENS_2_LS <- data.frame(Date = as.Date(df_SnP_LSTM_SENS_2_LS$Date), Value = df_SnP_LSTM_SENS_2_LS$strategy)
+
+df_SnP_LSTM_SENS_2A_LS <- read.csv('../LSTM/Results/S&P500/Sensitivity Analysis/SENS_2A/Visualisations/df_EC_LS_MAIN.csv')
+df_SnP_LSTM_SENS_2A_LS <- data.frame(Date = as.Date(df_SnP_LSTM_SENS_2A_LS$Date), Value = df_SnP_LSTM_SENS_2A_LS$strategy)
+
+
+ec_base_model_SnP_LS_SENS_2 <- ggplot() +
+  geom_line(data = df_Benchmark_LS_1_SnP, aes(x = Date, y = Value, color = "S&P 500")) +
+  geom_line(data = df_SnP_LSTM_LS_1, aes(x = Date, y = Value, color = "Base Case Batch Size = 32")) +
+  geom_line(data = df_SnP_LSTM_SENS_2_LS, aes(x = Date, y = Value, color = "Batch Size = 16")) +
+  geom_line(data = df_SnP_LSTM_SENS_2A_LS, aes(x = Date, y = Value, color = "Batch Size = 64")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("S&P 500", "Base Case Batch Size = 32", "Batch Size = 16", "Batch Size = 64")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+
+ec_base_model_SnP_LO_SENS_1 <- ec_base_model_SnP_LO_SENS_1 + theme(axis.title.x = element_blank(),
+                                                                   axis.title.y = element_blank())
+ec_base_model_SnP_LS_SENS_1 <- ec_base_model_SnP_LS_SENS_1 + theme(axis.title.x = element_blank(),
+                                                                   axis.title.y = element_blank())
+
+ec_base_model_SnP_LO_SENS_2 <- ec_base_model_SnP_LO_SENS_2 + theme(axis.title.x = element_blank(),
+                                                                   axis.title.y = element_blank())
+ec_base_model_SnP_LS_SENS_2 <- ec_base_model_SnP_LS_SENS_2 + theme(axis.title.x = element_blank(),
+                                                                   axis.title.y = element_blank())
+
+#...... FTSE 100 Long-Only ..........#
+
+df_FTSE_LSTM_1 <- read.csv('../LSTM/Results/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_FTSE_LSTM_1 <- data.frame(Date = as.Date(df_FTSE_LSTM_1$Date), Value = df_FTSE_LSTM_1$strategy)
+
+df_Benchmark_FTSE <- read.csv('../LSTM/RESULTS/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_Benchmark_FTSE <- data.frame(Date = as.Date(df_Benchmark_FTSE$Date), Value = df_Benchmark_FTSE$buy_n_hold)
+
+df_FTSE_LSTM_SENS_1 <- read.csv('../LSTM/Results/FTSE100/Sensitivity Analysis/SENS_1/Visualisations/df_EC_LO_MAIN.csv')
+df_FTSE_LSTM_SENS_1 <- data.frame(Date = as.Date(df_FTSE_LSTM_SENS_1$Date), Value = df_FTSE_LSTM_SENS_1$strategy)
+
+df_FTSE_LSTM_SENS_1A <- read.csv('../LSTM/Results/FTSE100/Sensitivity Analysis/SENS_1A/Visualisations/df_EC_LO_MAIN.csv')
+df_FTSE_LSTM_SENS_1A <- data.frame(Date = as.Date(df_FTSE_LSTM_SENS_1A$Date), Value = df_FTSE_LSTM_SENS_1A$strategy)
+
+ec_base_model_FTSE_LO_SENS_1 <- ggplot() +
+  geom_line(data = df_Benchmark_FTSE, aes(x = Date, y = Value, color = "FTSE 100")) +
+  geom_line(data = df_FTSE_LSTM_1, aes(x = Date, y = Value, color = "Base Case Dropout = 0.075")) +
+  geom_line(data = df_FTSE_LSTM_SENS_1, aes(x = Date, y = Value, color = "Dropout = 0.05")) +
+  geom_line(data = df_FTSE_LSTM_SENS_1A, aes(x = Date, y = Value, color = "Dropout = 0.1")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("FTSE 100", "Base Case Dropout = 0.075", "Dropout = 0.05", "Dropout = 0.1")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+#...... FTSE 100 Long-Short ..........#
+df_FTSE_LSTM_LS_1 <- read.csv('../LSTM/Results/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_FTSE_LSTM_LS_1 <- data.frame(Date = as.Date(df_FTSE_LSTM_LS_1$Date), Value = df_FTSE_LSTM_LS_1$strategy)
+
+df_Benchmark_LS_1_FTSE <- read.csv('../LSTM/Results/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_Benchmark_LS_1_FTSE <- data.frame(Date = as.Date(df_Benchmark_LS_1_FTSE$Date), Value = df_Benchmark_LS_1_FTSE$buy_n_hold)
+
+df_FTSE_LSTM_SENS_1_LS <- read.csv('../LSTM/Results/FTSE100/Sensitivity Analysis/SENS_1/Visualisations/df_EC_LS_MAIN.csv')
+df_FTSE_LSTM_SENS_1_LS <- data.frame(Date = as.Date(df_FTSE_LSTM_SENS_1_LS$Date), Value = df_FTSE_LSTM_SENS_1_LS$strategy)
+
+df_FTSE_LSTM_SENS_1A_LS <- read.csv('../LSTM/Results/FTSE100/Sensitivity Analysis/SENS_1A/Visualisations/df_EC_LS_MAIN.csv')
+df_FTSE_LSTM_SENS_1A_LS <- data.frame(Date = as.Date(df_FTSE_LSTM_SENS_1A_LS$Date), Value = df_FTSE_LSTM_SENS_1A_LS$strategy)
+
+
+ec_base_model_FTSE_LS_SENS_1 <- ggplot() +
+  geom_line(data = df_Benchmark_LS_1_FTSE, aes(x = Date, y = Value, color = "FTSE 100")) +
+  geom_line(data = df_FTSE_LSTM_LS_1, aes(x = Date, y = Value, color = "Base Case Dropout = 0.075")) +
+  geom_line(data = df_FTSE_LSTM_SENS_1_LS, aes(x = Date, y = Value, color = "Dropout = 0.05")) +
+  geom_line(data = df_FTSE_LSTM_SENS_1A_LS, aes(x = Date, y = Value, color = "Dropout = 0.1")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("FTSE 100", "Base Case Dropout = 0.075", "Dropout = 0.05", "Dropout = 0.1")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+
+#...... FTSE 100 Long-Only ..........#
+
+df_FTSE_LSTM_1 <- read.csv('../LSTM/Results/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_FTSE_LSTM_1 <- data.frame(Date = as.Date(df_FTSE_LSTM_1$Date), Value = df_FTSE_LSTM_1$strategy)
+
+df_Benchmark_FTSE <- read.csv('../LSTM/RESULTS/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_Benchmark_FTSE <- data.frame(Date = as.Date(df_Benchmark_FTSE$Date), Value = df_Benchmark_FTSE$buy_n_hold)
+
+df_FTSE_LSTM_SENS_2 <- read.csv('../LSTM/Results/FTSE100/Sensitivity Analysis/SENS_2/Visualisations/df_EC_LO_MAIN.csv')
+df_FTSE_LSTM_SENS_2 <- data.frame(Date = as.Date(df_FTSE_LSTM_SENS_2$Date), Value = df_FTSE_LSTM_SENS_2$strategy)
+
+df_FTSE_LSTM_SENS_2A <- read.csv('../LSTM/Results/FTSE100/Sensitivity Analysis/SENS_2A/Visualisations/df_EC_LO_MAIN.csv')
+df_FTSE_LSTM_SENS_2A <- data.frame(Date = as.Date(df_FTSE_LSTM_SENS_2A$Date), Value = df_FTSE_LSTM_SENS_2A$strategy)
+
+ec_base_model_FTSE_LO_SENS_2 <- ggplot() +
+  geom_line(data = df_Benchmark_FTSE, aes(x = Date, y = Value, color = "FTSE 100")) +
+  geom_line(data = df_FTSE_LSTM_1, aes(x = Date, y = Value, color = "Base Case Batch Size = 32")) +
+  geom_line(data = df_FTSE_LSTM_SENS_2, aes(x = Date, y = Value, color = "Batch Size = 16")) +
+  geom_line(data = df_FTSE_LSTM_SENS_2A, aes(x = Date, y = Value, color = "Batch Size = 64")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("FTSE 100", "Base Case Batch Size = 32", "Batch Size = 16", "Batch Size = 64")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+#...... FTSE 100 Long-Short ..........#
+df_FTSE_LSTM_LS_1 <- read.csv('../LSTM/Results/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_FTSE_LSTM_LS_1 <- data.frame(Date = as.Date(df_FTSE_LSTM_LS_1$Date), Value = df_FTSE_LSTM_LS_1$strategy)
+
+df_Benchmark_LS_1_FTSE <- read.csv('../LSTM/Results/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_Benchmark_LS_1_FTSE <- data.frame(Date = as.Date(df_Benchmark_LS_1_FTSE$Date), Value = df_Benchmark_LS_1_FTSE$buy_n_hold)
+
+df_FTSE_LSTM_SENS_2_LS <- read.csv('../LSTM/Results/FTSE100/Sensitivity Analysis/SENS_2/Visualisations/df_EC_LS_MAIN.csv')
+df_FTSE_LSTM_SENS_2_LS <- data.frame(Date = as.Date(df_FTSE_LSTM_SENS_2_LS$Date), Value = df_FTSE_LSTM_SENS_2_LS$strategy)
+
+df_FTSE_LSTM_SENS_2A_LS <- read.csv('../LSTM/Results/FTSE100/Sensitivity Analysis/SENS_2A/Visualisations/df_EC_LS_MAIN.csv')
+df_FTSE_LSTM_SENS_2A_LS <- data.frame(Date = as.Date(df_FTSE_LSTM_SENS_2A_LS$Date), Value = df_FTSE_LSTM_SENS_2A_LS$strategy)
+
+
+ec_base_model_FTSE_LS_SENS_2 <- ggplot() +
+  geom_line(data = df_Benchmark_LS_1_FTSE, aes(x = Date, y = Value, color = "FTSE 100")) +
+  geom_line(data = df_FTSE_LSTM_LS_1, aes(x = Date, y = Value, color = "Base Case Batch Size = 32")) +
+  geom_line(data = df_FTSE_LSTM_SENS_2_LS, aes(x = Date, y = Value, color = "Batch Size = 16")) +
+  geom_line(data = df_FTSE_LSTM_SENS_2A_LS, aes(x = Date, y = Value, color = "Batch Size = 64")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("FTSE 100", "Base Case Batch Size = 32", "Batch Size = 16", "Batch Size = 64")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+
+ec_base_model_FTSE_LO_SENS_1 <- ec_base_model_FTSE_LO_SENS_1 + theme(axis.title.x = element_blank(),
+                                                                     axis.title.y = element_blank())
+ec_base_model_FTSE_LS_SENS_1 <- ec_base_model_FTSE_LS_SENS_1 + theme(axis.title.x = element_blank(),
+                                                                     axis.title.y = element_blank())
+
+ec_base_model_FTSE_LO_SENS_2 <- ec_base_model_FTSE_LO_SENS_2 + theme(axis.title.x = element_blank(),
+                                                                     axis.title.y = element_blank())
+ec_base_model_FTSE_LS_SENS_2 <- ec_base_model_FTSE_LS_SENS_2 + theme(axis.title.x = element_blank(),
+                                                                     axis.title.y = element_blank())
+
+#...... CAC 40 Long-Only ..........#
+
+df_CAC_LSTM_1 <- read.csv('../LSTM/Results/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_CAC_LSTM_1 <- data.frame(Date = as.Date(df_CAC_LSTM_1$Date), Value = df_CAC_LSTM_1$strategy)
+
+df_Benchmark_CAC <- read.csv('../LSTM/RESULTS/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_Benchmark_CAC <- data.frame(Date = as.Date(df_Benchmark_CAC$Date), Value = df_Benchmark_CAC$buy_n_hold)
+
+df_CAC_LSTM_SENS_1 <- read.csv('../LSTM/Results/CAC/Sensitivity Analysis/SENS_1/Visualisations/df_EC_LO_MAIN.csv')
+df_CAC_LSTM_SENS_1 <- data.frame(Date = as.Date(df_CAC_LSTM_SENS_1$Date), Value = df_CAC_LSTM_SENS_1$strategy)
+
+df_CAC_LSTM_SENS_1A <- read.csv('../LSTM/Results/CAC/Sensitivity Analysis/SENS_1A/Visualisations/df_EC_LO_MAIN.csv')
+df_CAC_LSTM_SENS_1A <- data.frame(Date = as.Date(df_CAC_LSTM_SENS_1A$Date), Value = df_CAC_LSTM_SENS_1A$strategy)
+
+ec_base_model_CAC_LO_SENS_1 <- ggplot() +
+  geom_line(data = df_Benchmark_CAC, aes(x = Date, y = Value, color = "CAC 40")) +
+  geom_line(data = df_CAC_LSTM_1, aes(x = Date, y = Value, color = "Base Case Dropout = 0.075")) +
+  geom_line(data = df_CAC_LSTM_SENS_1, aes(x = Date, y = Value, color = "Dropout = 0.05")) +
+  geom_line(data = df_CAC_LSTM_SENS_1A, aes(x = Date, y = Value, color = "Dropout = 0.1")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("CAC 40", "Base Case Dropout = 0.075", "Dropout = 0.05", "Dropout = 0.1")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+#...... CAC 40 Long-Short ..........#
+df_CAC_LSTM_LS_1 <- read.csv('../LSTM/Results/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_CAC_LSTM_LS_1 <- data.frame(Date = as.Date(df_CAC_LSTM_LS_1$Date), Value = df_CAC_LSTM_LS_1$strategy)
+
+df_Benchmark_LS_1_CAC <- read.csv('../LSTM/Results/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_Benchmark_LS_1_CAC <- data.frame(Date = as.Date(df_Benchmark_LS_1_CAC$Date), Value = df_Benchmark_LS_1_CAC$buy_n_hold)
+
+df_CAC_LSTM_SENS_1_LS <- read.csv('../LSTM/Results/CAC/Sensitivity Analysis/SENS_1/Visualisations/df_EC_LS_MAIN.csv')
+df_CAC_LSTM_SENS_1_LS <- data.frame(Date = as.Date(df_CAC_LSTM_SENS_1_LS$Date), Value = df_CAC_LSTM_SENS_1_LS$strategy)
+
+df_CAC_LSTM_SENS_1A_LS <- read.csv('../LSTM/Results/CAC/Sensitivity Analysis/SENS_1A/Visualisations/df_EC_LS_MAIN.csv')
+df_CAC_LSTM_SENS_1A_LS <- data.frame(Date = as.Date(df_CAC_LSTM_SENS_1A_LS$Date), Value = df_CAC_LSTM_SENS_1A_LS$strategy)
+
+
+ec_base_model_CAC_LS_SENS_1 <- ggplot() +
+  geom_line(data = df_Benchmark_LS_1_CAC, aes(x = Date, y = Value, color = "CAC 40")) +
+  geom_line(data = df_CAC_LSTM_LS_1, aes(x = Date, y = Value, color = "Base Case Dropout = 0.075")) +
+  geom_line(data = df_CAC_LSTM_SENS_1_LS, aes(x = Date, y = Value, color = "Dropout = 0.05")) +
+  geom_line(data = df_CAC_LSTM_SENS_1A_LS, aes(x = Date, y = Value, color = "Dropout = 0.1")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("CAC 40", "Base Case Dropout = 0.075", "Dropout = 0.05", "Dropout = 0.1")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+
+#...... CAC 40 Long-Only ..........#
+
+df_CAC_LSTM_1 <- read.csv('../LSTM/Results/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_CAC_LSTM_1 <- data.frame(Date = as.Date(df_CAC_LSTM_1$Date), Value = df_CAC_LSTM_1$strategy)
+
+df_Benchmark_CAC <- read.csv('../LSTM/RESULTS/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_Benchmark_CAC <- data.frame(Date = as.Date(df_Benchmark_CAC$Date), Value = df_Benchmark_CAC$buy_n_hold)
+
+df_CAC_LSTM_SENS_2 <- read.csv('../LSTM/Results/CAC/Sensitivity Analysis/SENS_2/Visualisations/df_EC_LO_MAIN.csv')
+df_CAC_LSTM_SENS_2 <- data.frame(Date = as.Date(df_CAC_LSTM_SENS_2$Date), Value = df_CAC_LSTM_SENS_2$strategy)
+
+df_CAC_LSTM_SENS_2A <- read.csv('../LSTM/Results/CAC/Sensitivity Analysis/SENS_2A/Visualisations/df_EC_LO_MAIN.csv')
+df_CAC_LSTM_SENS_2A <- data.frame(Date = as.Date(df_CAC_LSTM_SENS_2A$Date), Value = df_CAC_LSTM_SENS_2A$strategy)
+
+ec_base_model_CAC_LO_SENS_2 <- ggplot() +
+  geom_line(data = df_Benchmark_CAC, aes(x = Date, y = Value, color = "CAC 40")) +
+  geom_line(data = df_CAC_LSTM_1, aes(x = Date, y = Value, color = "Base Case Batch Size = 32")) +
+  geom_line(data = df_CAC_LSTM_SENS_2, aes(x = Date, y = Value, color = "Batch Size = 16")) +
+  #geom_line(data = df_CAC_LSTM_SENS_2A, aes(x = Date, y = Value, color = "Batch Size = 64")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("CAC 40", "Base Case Batch Size = 32", "Batch Size = 16", "Batch Size = 64")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+#...... CAC 40 Long-Short ..........#
+df_CAC_LSTM_LS_1 <- read.csv('../LSTM/Results/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_CAC_LSTM_LS_1 <- data.frame(Date = as.Date(df_CAC_LSTM_LS_1$Date), Value = df_CAC_LSTM_LS_1$strategy)
+
+df_Benchmark_LS_1_CAC <- read.csv('../LSTM/Results/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_Benchmark_LS_1_CAC <- data.frame(Date = as.Date(df_Benchmark_LS_1_CAC$Date), Value = df_Benchmark_LS_1_CAC$buy_n_hold)
+
+df_CAC_LSTM_SENS_2_LS <- read.csv('../LSTM/Results/CAC/Sensitivity Analysis/SENS_2/Visualisations/df_EC_LS_MAIN.csv')
+df_CAC_LSTM_SENS_2_LS <- data.frame(Date = as.Date(df_CAC_LSTM_SENS_2_LS$Date), Value = df_CAC_LSTM_SENS_2_LS$strategy)
+
+df_CAC_LSTM_SENS_2A_LS <- read.csv('../LSTM/Results/CAC/Sensitivity Analysis/SENS_2A/Visualisations/df_EC_LS_MAIN.csv')
+df_CAC_LSTM_SENS_2A_LS <- data.frame(Date = as.Date(df_CAC_LSTM_SENS_2A_LS$Date), Value = df_CAC_LSTM_SENS_2A_LS$strategy)
+
+
+ec_base_model_CAC_LS_SENS_2 <- ggplot() +
+  geom_line(data = df_Benchmark_LS_1_CAC, aes(x = Date, y = Value, color = "CAC 40")) +
+  geom_line(data = df_CAC_LSTM_LS_1, aes(x = Date, y = Value, color = "Base Case Batch Size = 32")) +
+  geom_line(data = df_CAC_LSTM_SENS_2_LS, aes(x = Date, y = Value, color = "Batch Size = 16")) +
+  #geom_line(data = df_CAC_LSTM_SENS_2A_LS, aes(x = Date, y = Value, color = "Batch Size = 64")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("CAC 40", "Base Case Batch Size = 32", "Batch Size = 16", "Batch Size = 64")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+
+ec_base_model_CAC_LO_SENS_1 <- ec_base_model_CAC_LO_SENS_1 + theme(axis.title.x = element_blank(),
+                                                                   axis.title.y = element_blank())
+ec_base_model_CAC_LS_SENS_1 <- ec_base_model_CAC_LS_SENS_1 + theme(axis.title.x = element_blank(),
+                                                                   axis.title.y = element_blank())
+
+ec_base_model_CAC_LO_SENS_2 <- ec_base_model_CAC_LO_SENS_2 + theme(axis.title.x = element_blank(),
+                                                                   axis.title.y = element_blank())
+ec_base_model_CAC_LS_SENS_2 <- ec_base_model_CAC_LS_SENS_2 + theme(axis.title.x = element_blank(),
+                                                                   axis.title.y = element_blank())
+
+grid.arrange(ec_base_model_SnP_LO_SENS_1, ec_base_model_SnP_LS_SENS_1, ec_base_model_SnP_LO_SENS_2, ec_base_model_SnP_LS_SENS_2, ec_base_model_FTSE_LO_SENS_1, ec_base_model_FTSE_LS_SENS_1, ec_base_model_FTSE_LO_SENS_2, ec_base_model_FTSE_LS_SENS_2, ec_base_model_CAC_LO_SENS_1, ec_base_model_CAC_LS_SENS_1, ec_base_model_CAC_LO_SENS_2, ec_base_model_CAC_LS_SENS_2, ncol=2)
+
+```
+
+\vspace{-0.5cm}\noindent\linespread{0.65}\selectfont {\scriptsize \textbf{Note}: \textit{The figure presents the equity curves for the sensitivity analysis performed on the LSTM model. S\&P 500, FTSE 100, and CAC 40 represents the benchmark Buy\&Hold strategy for each index respectively. S\&P 500 index trading starts on 2005-01-25, FTSE 100 equity index trading starts on 2005-01-13, and CAC 40 equity index trading starts on 2004-12-28. Each equity curve consists of daily frequency data. The transaction costs are 0.1\%. The best values are in bold and are bolded with respect to the base case scenario.}}
+
+\linespread{1.5}\selectfont
+
+\pagebreak
+
+\renewcommand{\arraystretch}{0.72}
+\fontsize{9}{9.5}\selectfont 
+```{r SENS_perf_metric__LO_LS LSTM for all indices, results='asis'}
+##### LONG-ONLY S&P500 #####
+perf_metrics_base_model_L_O_SnP <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/S&P 500/df_perf_metr_LO_LSTM.csv')
+perf_metrics_base_model_L_O_SnP[is.na(perf_metrics_base_model_L_O_SnP)] <- ""
+
+##### LONG-SHORT S&P500 #####
+perf_metrics_base_model_LS_SnP <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/S&P 500/df_perf_metr_LS_LSTM.csv')
+perf_metrics_base_model_LS_SnP[is.na(perf_metrics_base_model_LS_SnP)] <- ""
+
+##### LONG-ONLY FTSE100 #####
+perf_metrics_base_model_L_O_FTSE <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/FTSE 100/df_perf_metr_LO_LSTM.csv')
+perf_metrics_base_model_L_O_FTSE[is.na(perf_metrics_base_model_L_O_FTSE)] <- ""
+
+##### LONG-SHORT FTSE100 #####
+perf_metrics_base_model_LS_FTSE <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/FTSE 100/df_perf_metr_LS_LSTM.csv')
+perf_metrics_base_model_LS_FTSE[is.na(perf_metrics_base_model_LS_FTSE)] <- ""
+
+##### LONG-ONLY CAC40 #####
+perf_metrics_base_model_L_O_CAC <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/CAC 40/df_perf_metr_LO_LSTM.csv')
+perf_metrics_base_model_L_O_CAC[is.na(perf_metrics_base_model_L_O_CAC)] <- ""
+
+##### LONG-SHORT CAC40 #####
+perf_metrics_base_model_LS_CAC <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/CAC 40/df_perf_metr_LS_LSTM.csv')
+perf_metrics_base_model_LS_CAC[is.na(perf_metrics_base_model_LS_CAC)] <- ""
+
+perf_metrics_base_model_LO_LS <- bind_rows(perf_metrics_base_model_L_O_SnP, perf_metrics_base_model_LS_SnP, perf_metrics_base_model_L_O_FTSE, perf_metrics_base_model_LS_FTSE, perf_metrics_base_model_L_O_CAC, perf_metrics_base_model_LS_CAC)
+
+# Create a Markdown table
+kable(perf_metrics_base_model_LO_LS, format = "simple", col.names = c("" , "", "ARC(%)", "ASD(%)", "MD(%)", "MLD", "IR*(%)", "IR**(%)"), caption = 'LSTM Sensitivity Analysis performance metrics', align = 'c')
+```
+
+\normalsize
+\vspace{-0.5cm}\noindent\linespread{0.65}\selectfont {\scriptsize \textbf{Note}: \textit{The table shows the performance metrics for the sensitivity analysis performed on the LSTM model. S\&P 500, FTSE 100, and CAC 40 represents the benchmark Buy\&Hold strategy for each index respectively. S\&P 500 index trading starts on 2005-01-25, FTSE 100 equity index trading starts on 2005-01-13, and CAC 40 equity index trading starts on 2004-12-28. In the base case scenario, the Dropout rate is set to 0.075 and the Batch Size is set to 32. The transaction costs are 0.1\%. The best values are in bold and are bolded with respect to the base case scenario.}}
+
+\linespread{1.5}\selectfont
+
+## LSTM-ARIMA
+
+Figure 10 and Table 7 present the results of a sensitivity analysis conducted on the S\&P 500, FTSE 100, and CAC 40 equity indices using the LSTM-ARIMA model.  The results reveal that the highest values of the modified information ratio ($IR^{**}$) are achieved in the base case scenario for the FTSE 100 and CAC 40 equity indices, as depicted in Panel E to Panel L.
+
+However, in case of the S\&P 500 equity index, a higher $IR^{**}$ metric is attained for the Long-Only strategy when the dropout rate is decreased (Panel A) and when the batch size reduced (Panel B). In contrast, for the Long-Short strategy, the base case scenario proves to be the most effective in terms of the $IR^{**}$ metric.
+
+\pagebreak
+
+```{r SENS LSTM-ARIMA, results='hide', fig.cap="LSTM-ARIMA Sensitivity Analysis for S&P 500", fig.width=10, fig.height=12}
+#...... S&P 500 Long-Only ..........#
+
+df_SnP_LSTM_1 <- read.csv('../ARIMA-LSTM/Results/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_SnP_LSTM_1 <- data.frame(Date = as.Date(df_SnP_LSTM_1$Date), Value = df_SnP_LSTM_1$strategy)
+
+df_Benchmark_SnP <- read.csv('../ARIMA-LSTM/RESULTS/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_Benchmark_SnP <- data.frame(Date = as.Date(df_Benchmark_SnP$Date), Value = df_Benchmark_SnP$buy_n_hold)
+
+df_SnP_LSTM_SENS_1 <- read.csv('../ARIMA-LSTM/Results/S&P500/Sensitivity Analysis/SENS_1/Visualisations/df_EC_LO_MAIN.csv')
+df_SnP_LSTM_SENS_1 <- data.frame(Date = as.Date(df_SnP_LSTM_SENS_1$Date), Value = df_SnP_LSTM_SENS_1$strategy)
+
+df_SnP_LSTM_SENS_1A <- read.csv('../ARIMA-LSTM/Results/S&P500/Sensitivity Analysis/SENS_1A/Visualisations/df_EC_LO_MAIN.csv')
+df_SnP_LSTM_SENS_1A <- data.frame(Date = as.Date(df_SnP_LSTM_SENS_1A$Date), Value = df_SnP_LSTM_SENS_1A$strategy)
+
+ec_base_model_SnP_LO_SENS_1 <- ggplot() +
+  geom_line(data = df_Benchmark_SnP, aes(x = Date, y = Value, color = "S&P 500")) +
+  geom_line(data = df_SnP_LSTM_1, aes(x = Date, y = Value, color = "Base Case Dropout = 0.075")) +
+  geom_line(data = df_SnP_LSTM_SENS_1, aes(x = Date, y = Value, color = "Dropout = 0.05")) +
+  geom_line(data = df_SnP_LSTM_SENS_1A, aes(x = Date, y = Value, color = "Dropout = 0.1")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("S&P 500", "Base Case Dropout = 0.075", "Dropout = 0.05", "Dropout = 0.1")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+#...... S&P 500 Long-Short ..........#
+df_SnP_LSTM_LS_1 <- read.csv('../ARIMA-LSTM/Results/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_SnP_LSTM_LS_1 <- data.frame(Date = as.Date(df_SnP_LSTM_LS_1$Date), Value = df_SnP_LSTM_LS_1$strategy)
+
+df_Benchmark_LS_1_SnP <- read.csv('../ARIMA-LSTM/Results/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_Benchmark_LS_1_SnP <- data.frame(Date = as.Date(df_Benchmark_LS_1_SnP$Date), Value = df_Benchmark_LS_1_SnP$buy_n_hold)
+
+df_SnP_LSTM_SENS_1_LS <- read.csv('../ARIMA-LSTM/Results/S&P500/Sensitivity Analysis/SENS_1/Visualisations/df_EC_LS_MAIN.csv')
+df_SnP_LSTM_SENS_1_LS <- data.frame(Date = as.Date(df_SnP_LSTM_SENS_1_LS$Date), Value = df_SnP_LSTM_SENS_1_LS$strategy)
+
+df_SnP_LSTM_SENS_1A_LS <- read.csv('../ARIMA-LSTM/Results/S&P500/Sensitivity Analysis/SENS_1A/Visualisations/df_EC_LS_MAIN.csv')
+df_SnP_LSTM_SENS_1A_LS <- data.frame(Date = as.Date(df_SnP_LSTM_SENS_1A_LS$Date), Value = df_SnP_LSTM_SENS_1A_LS$strategy)
+
+
+ec_base_model_SnP_LS_SENS_1 <- ggplot() +
+  geom_line(data = df_Benchmark_LS_1_SnP, aes(x = Date, y = Value, color = "S&P 500")) +
+  geom_line(data = df_SnP_LSTM_LS_1, aes(x = Date, y = Value, color = "Base Case Dropout = 0.075")) +
+  geom_line(data = df_SnP_LSTM_SENS_1_LS, aes(x = Date, y = Value, color = "Dropout = 0.05")) +
+  geom_line(data = df_SnP_LSTM_SENS_1A_LS, aes(x = Date, y = Value, color = "Dropout = 0.1")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("S&P 500", "Base Case Dropout = 0.075", "Dropout = 0.05", "Dropout = 0.1")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+
+#...... S&P 500 Long-Only ..........#
+
+df_SnP_LSTM_1 <- read.csv('../ARIMA-LSTM/Results/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_SnP_LSTM_1 <- data.frame(Date = as.Date(df_SnP_LSTM_1$Date), Value = df_SnP_LSTM_1$strategy)
+
+df_Benchmark_SnP <- read.csv('../ARIMA-LSTM/RESULTS/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_Benchmark_SnP <- data.frame(Date = as.Date(df_Benchmark_SnP$Date), Value = df_Benchmark_SnP$buy_n_hold)
+
+df_SnP_LSTM_SENS_2 <- read.csv('../ARIMA-LSTM/Results/S&P500/Sensitivity Analysis/SENS_2/Visualisations/df_EC_LO_MAIN.csv')
+df_SnP_LSTM_SENS_2 <- data.frame(Date = as.Date(df_SnP_LSTM_SENS_2$Date), Value = df_SnP_LSTM_SENS_2$strategy)
+
+df_SnP_LSTM_SENS_2A <- read.csv('../ARIMA-LSTM/Results/S&P500/Sensitivity Analysis/SENS_2A/Visualisations/df_EC_LO_MAIN.csv')
+df_SnP_LSTM_SENS_2A <- data.frame(Date = as.Date(df_SnP_LSTM_SENS_2A$Date), Value = df_SnP_LSTM_SENS_2A$strategy)
+
+ec_base_model_SnP_LO_SENS_2 <- ggplot() +
+  geom_line(data = df_Benchmark_SnP, aes(x = Date, y = Value, color = "S&P 500")) +
+  geom_line(data = df_SnP_LSTM_1, aes(x = Date, y = Value, color = "Base Case Batch Size = 32")) +
+  geom_line(data = df_SnP_LSTM_SENS_2, aes(x = Date, y = Value, color = "Batch Size = 16")) +
+  geom_line(data = df_SnP_LSTM_SENS_2A, aes(x = Date, y = Value, color = "Batch Size = 64")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("S&P 500", "Base Case Batch Size = 32", "Batch Size = 16", "Batch Size = 64")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+#...... S&P 500 Long-Short ..........#
+df_SnP_LSTM_LS_1 <- read.csv('../ARIMA-LSTM/Results/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_SnP_LSTM_LS_1 <- data.frame(Date = as.Date(df_SnP_LSTM_LS_1$Date), Value = df_SnP_LSTM_LS_1$strategy)
+
+df_Benchmark_LS_1_SnP <- read.csv('../ARIMA-LSTM/Results/S&P500/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_Benchmark_LS_1_SnP <- data.frame(Date = as.Date(df_Benchmark_LS_1_SnP$Date), Value = df_Benchmark_LS_1_SnP$buy_n_hold)
+
+df_SnP_LSTM_SENS_2_LS <- read.csv('../ARIMA-LSTM/Results/S&P500/Sensitivity Analysis/SENS_2/Visualisations/df_EC_LS_MAIN.csv')
+df_SnP_LSTM_SENS_2_LS <- data.frame(Date = as.Date(df_SnP_LSTM_SENS_2_LS$Date), Value = df_SnP_LSTM_SENS_2_LS$strategy)
+
+df_SnP_LSTM_SENS_2A_LS <- read.csv('../ARIMA-LSTM/Results/S&P500/Sensitivity Analysis/SENS_2A/Visualisations/df_EC_LS_MAIN.csv')
+df_SnP_LSTM_SENS_2A_LS <- data.frame(Date = as.Date(df_SnP_LSTM_SENS_2A_LS$Date), Value = df_SnP_LSTM_SENS_2A_LS$strategy)
+
+
+ec_base_model_SnP_LS_SENS_2 <- ggplot() +
+  geom_line(data = df_Benchmark_LS_1_SnP, aes(x = Date, y = Value, color = "S&P 500")) +
+  geom_line(data = df_SnP_LSTM_LS_1, aes(x = Date, y = Value, color = "Base Case Batch Size = 32")) +
+  geom_line(data = df_SnP_LSTM_SENS_2_LS, aes(x = Date, y = Value, color = "Batch Size = 16")) +
+  geom_line(data = df_SnP_LSTM_SENS_2A_LS, aes(x = Date, y = Value, color = "Batch Size = 64")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("S&P 500", "Base Case Batch Size = 32", "Batch Size = 16", "Batch Size = 64")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+
+ec_base_model_SnP_LO_SENS_1 <- ec_base_model_SnP_LO_SENS_1 + theme(axis.title.x = element_blank(),
+                                                                   axis.title.y = element_blank())
+ec_base_model_SnP_LS_SENS_1 <- ec_base_model_SnP_LS_SENS_1 + theme(axis.title.x = element_blank(),
+                                                                   axis.title.y = element_blank())
+
+ec_base_model_SnP_LO_SENS_2 <- ec_base_model_SnP_LO_SENS_2 + theme(axis.title.x = element_blank(),
+                                                                   axis.title.y = element_blank())
+ec_base_model_SnP_LS_SENS_2 <- ec_base_model_SnP_LS_SENS_2 + theme(axis.title.x = element_blank(),
+                                                                   axis.title.y = element_blank())
+
+#...... FTSE 100 Long-Only ..........#
+
+df_FTSE_LSTM_1 <- read.csv('../ARIMA-LSTM/Results/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1A/Visualisations/df_EC_LO_MAIN.csv')
+df_FTSE_LSTM_1 <- data.frame(Date = as.Date(df_FTSE_LSTM_1$Date), Value = df_FTSE_LSTM_1$strategy)
+
+df_Benchmark_FTSE <- read.csv('../ARIMA-LSTM/RESULTS/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1A/Visualisations/df_EC_LO_MAIN.csv')
+df_Benchmark_FTSE <- data.frame(Date = as.Date(df_Benchmark_FTSE$Date), Value = df_Benchmark_FTSE$buy_n_hold)
+
+df_FTSE_LSTM_SENS_1 <- read.csv('../ARIMA-LSTM/Results/FTSE100/Sensitivity Analysis/SENS_1/Visualisations/df_EC_LO_MAIN.csv')
+df_FTSE_LSTM_SENS_1 <- data.frame(Date = as.Date(df_FTSE_LSTM_SENS_1$Date), Value = df_FTSE_LSTM_SENS_1$strategy)
+
+df_FTSE_LSTM_SENS_1A <- read.csv('../ARIMA-LSTM/Results/FTSE100/Sensitivity Analysis/SENS_1A/Visualisations/df_EC_LO_MAIN.csv')
+df_FTSE_LSTM_SENS_1A <- data.frame(Date = as.Date(df_FTSE_LSTM_SENS_1A$Date), Value = df_FTSE_LSTM_SENS_1A$strategy)
+
+ec_base_model_FTSE_LO_SENS_1 <- ggplot() +
+  geom_line(data = df_Benchmark_FTSE, aes(x = Date, y = Value, color = "FTSE 100")) +
+  geom_line(data = df_FTSE_LSTM_1, aes(x = Date, y = Value, color = "Base Case Dropout = 0.075")) +
+  geom_line(data = df_FTSE_LSTM_SENS_1, aes(x = Date, y = Value, color = "Dropout = 0.05")) +
+  geom_line(data = df_FTSE_LSTM_SENS_1A, aes(x = Date, y = Value, color = "Dropout = 0.1")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("FTSE 100", "Base Case Dropout = 0.075", "Dropout = 0.05", "Dropout = 0.1")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+#...... FTSE 100 Long-Short ..........#
+df_FTSE_LSTM_LS_1 <- read.csv('../ARIMA-LSTM/Results/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1A/Visualisations/df_EC_LS_MAIN.csv')
+df_FTSE_LSTM_LS_1 <- data.frame(Date = as.Date(df_FTSE_LSTM_LS_1$Date), Value = df_FTSE_LSTM_LS_1$strategy)
+
+df_Benchmark_LS_1_FTSE <- read.csv('../ARIMA-LSTM/Results/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1A/Visualisations/df_EC_LS_MAIN.csv')
+df_Benchmark_LS_1_FTSE <- data.frame(Date = as.Date(df_Benchmark_LS_1_FTSE$Date), Value = df_Benchmark_LS_1_FTSE$buy_n_hold)
+
+df_FTSE_LSTM_SENS_1_LS <- read.csv('../ARIMA-LSTM/Results/FTSE100/Sensitivity Analysis/SENS_1/Visualisations/df_EC_LS_MAIN.csv')
+df_FTSE_LSTM_SENS_1_LS <- data.frame(Date = as.Date(df_FTSE_LSTM_SENS_1_LS$Date), Value = df_FTSE_LSTM_SENS_1_LS$strategy)
+
+df_FTSE_LSTM_SENS_1A_LS <- read.csv('../ARIMA-LSTM/Results/FTSE100/Sensitivity Analysis/SENS_1A/Visualisations/df_EC_LS_MAIN.csv')
+df_FTSE_LSTM_SENS_1A_LS <- data.frame(Date = as.Date(df_FTSE_LSTM_SENS_1A_LS$Date), Value = df_FTSE_LSTM_SENS_1A_LS$strategy)
+
+
+ec_base_model_FTSE_LS_SENS_1 <- ggplot() +
+  geom_line(data = df_Benchmark_LS_1_FTSE, aes(x = Date, y = Value, color = "FTSE 100")) +
+  geom_line(data = df_FTSE_LSTM_LS_1, aes(x = Date, y = Value, color = "Base Case Dropout = 0.075")) +
+  geom_line(data = df_FTSE_LSTM_SENS_1_LS, aes(x = Date, y = Value, color = "Dropout = 0.05")) +
+  geom_line(data = df_FTSE_LSTM_SENS_1A_LS, aes(x = Date, y = Value, color = "Dropout = 0.1")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("FTSE 100", "Base Case Dropout = 0.075", "Dropout = 0.05", "Dropout = 0.1")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+
+#...... FTSE 100 Long-Only ..........#
+
+df_FTSE_LSTM_1 <- read.csv('../ARIMA-LSTM/Results/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1A/Visualisations/df_EC_LO_MAIN.csv')
+df_FTSE_LSTM_1 <- data.frame(Date = as.Date(df_FTSE_LSTM_1$Date), Value = df_FTSE_LSTM_1$strategy)
+
+df_Benchmark_FTSE <- read.csv('../ARIMA-LSTM/RESULTS/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1A/Visualisations/df_EC_LO_MAIN.csv')
+df_Benchmark_FTSE <- data.frame(Date = as.Date(df_Benchmark_FTSE$Date), Value = df_Benchmark_FTSE$buy_n_hold)
+
+df_FTSE_LSTM_SENS_2 <- read.csv('../ARIMA-LSTM/Results/FTSE100/Sensitivity Analysis/SENS_2/Visualisations/df_EC_LO_MAIN.csv')
+df_FTSE_LSTM_SENS_2 <- data.frame(Date = as.Date(df_FTSE_LSTM_SENS_2$Date), Value = df_FTSE_LSTM_SENS_2$strategy)
+
+df_FTSE_LSTM_SENS_2A <- read.csv('../ARIMA-LSTM/Results/FTSE100/Sensitivity Analysis/SENS_2A/Visualisations/df_EC_LO_MAIN.csv')
+df_FTSE_LSTM_SENS_2A <- data.frame(Date = as.Date(df_FTSE_LSTM_SENS_2A$Date), Value = df_FTSE_LSTM_SENS_2A$strategy)
+
+ec_base_model_FTSE_LO_SENS_2 <- ggplot() +
+  geom_line(data = df_Benchmark_FTSE, aes(x = Date, y = Value, color = "FTSE 100")) +
+  geom_line(data = df_FTSE_LSTM_1, aes(x = Date, y = Value, color = "Base Case Batch Size = 32")) +
+  geom_line(data = df_FTSE_LSTM_SENS_2, aes(x = Date, y = Value, color = "Batch Size = 16")) +
+  geom_line(data = df_FTSE_LSTM_SENS_2A, aes(x = Date, y = Value, color = "Batch Size = 64")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("FTSE 100", "Base Case Batch Size = 32", "Batch Size = 16", "Batch Size = 64")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+#...... FTSE 100 Long-Short ..........#
+df_FTSE_LSTM_LS_1 <- read.csv('../ARIMA-LSTM/Results/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1A/Visualisations/df_EC_LS_MAIN.csv')
+df_FTSE_LSTM_LS_1 <- data.frame(Date = as.Date(df_FTSE_LSTM_LS_1$Date), Value = df_FTSE_LSTM_LS_1$strategy)
+
+df_Benchmark_LS_1_FTSE <- read.csv('../ARIMA-LSTM/Results/FTSE100/Sensitivity Analysis/RANDOM_SEARCH_1A/Visualisations/df_EC_LS_MAIN.csv')
+df_Benchmark_LS_1_FTSE <- data.frame(Date = as.Date(df_Benchmark_LS_1_FTSE$Date), Value = df_Benchmark_LS_1_FTSE$buy_n_hold)
+
+df_FTSE_LSTM_SENS_2_LS <- read.csv('../ARIMA-LSTM/Results/FTSE100/Sensitivity Analysis/SENS_2/Visualisations/df_EC_LS_MAIN.csv')
+df_FTSE_LSTM_SENS_2_LS <- data.frame(Date = as.Date(df_FTSE_LSTM_SENS_2_LS$Date), Value = df_FTSE_LSTM_SENS_2_LS$strategy)
+
+df_FTSE_LSTM_SENS_2A_LS <- read.csv('../ARIMA-LSTM/Results/FTSE100/Sensitivity Analysis/SENS_2A/Visualisations/df_EC_LS_MAIN.csv')
+df_FTSE_LSTM_SENS_2A_LS <- data.frame(Date = as.Date(df_FTSE_LSTM_SENS_2A_LS$Date), Value = df_FTSE_LSTM_SENS_2A_LS$strategy)
+
+
+ec_base_model_FTSE_LS_SENS_2 <- ggplot() +
+  geom_line(data = df_Benchmark_LS_1_FTSE, aes(x = Date, y = Value, color = "FTSE 100")) +
+  geom_line(data = df_FTSE_LSTM_LS_1, aes(x = Date, y = Value, color = "Base Case Batch Size = 32")) +
+  geom_line(data = df_FTSE_LSTM_SENS_2_LS, aes(x = Date, y = Value, color = "Batch Size = 16")) +
+  geom_line(data = df_FTSE_LSTM_SENS_2A_LS, aes(x = Date, y = Value, color = "Batch Size = 64")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("FTSE 100", "Base Case Batch Size = 32", "Batch Size = 16", "Batch Size = 64")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+
+ec_base_model_FTSE_LO_SENS_1 <- ec_base_model_FTSE_LO_SENS_1 + theme(axis.title.x = element_blank(),
+                                                                   axis.title.y = element_blank())
+ec_base_model_FTSE_LS_SENS_1 <- ec_base_model_FTSE_LS_SENS_1 + theme(axis.title.x = element_blank(),
+                                                                   axis.title.y = element_blank())
+
+ec_base_model_FTSE_LO_SENS_2 <- ec_base_model_FTSE_LO_SENS_2 + theme(axis.title.x = element_blank(),
+                                                                   axis.title.y = element_blank())
+ec_base_model_FTSE_LS_SENS_2 <- ec_base_model_FTSE_LS_SENS_2 + theme(axis.title.x = element_blank(),
+                                                                   axis.title.y = element_blank())
+
+#...... CAC 40 Long-Only ..........#
+
+df_CAC_LSTM_1 <- read.csv('../ARIMA-LSTM/Results/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_CAC_LSTM_1 <- data.frame(Date = as.Date(df_CAC_LSTM_1$Date), Value = df_CAC_LSTM_1$strategy)
+
+df_Benchmark_CAC <- read.csv('../ARIMA-LSTM/RESULTS/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_Benchmark_CAC <- data.frame(Date = as.Date(df_Benchmark_CAC$Date), Value = df_Benchmark_CAC$buy_n_hold)
+
+df_CAC_LSTM_SENS_1 <- read.csv('../ARIMA-LSTM/Results/CAC/Sensitivity Analysis/SENS_1/Visualisations/df_EC_LO_MAIN.csv')
+df_CAC_LSTM_SENS_1 <- data.frame(Date = as.Date(df_CAC_LSTM_SENS_1$Date), Value = df_CAC_LSTM_SENS_1$strategy)
+
+df_CAC_LSTM_SENS_1A <- read.csv('../ARIMA-LSTM/Results/CAC/Sensitivity Analysis/SENS_1A/Visualisations/df_EC_LO_MAIN.csv')
+df_CAC_LSTM_SENS_1A <- data.frame(Date = as.Date(df_CAC_LSTM_SENS_1A$Date), Value = df_CAC_LSTM_SENS_1A$strategy)
+
+ec_base_model_CAC_LO_SENS_1 <- ggplot() +
+  geom_line(data = df_Benchmark_CAC, aes(x = Date, y = Value, color = "CAC 40")) +
+  geom_line(data = df_CAC_LSTM_1, aes(x = Date, y = Value, color = "Base Case Dropout = 0.075")) +
+  geom_line(data = df_CAC_LSTM_SENS_1, aes(x = Date, y = Value, color = "Dropout = 0.05")) +
+  geom_line(data = df_CAC_LSTM_SENS_1A, aes(x = Date, y = Value, color = "Dropout = 0.1")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("CAC 40", "Base Case Dropout = 0.075", "Dropout = 0.05", "Dropout = 0.1")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+#...... CAC 40 Long-Short ..........#
+df_CAC_LSTM_LS_1 <- read.csv('../ARIMA-LSTM/Results/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_CAC_LSTM_LS_1 <- data.frame(Date = as.Date(df_CAC_LSTM_LS_1$Date), Value = df_CAC_LSTM_LS_1$strategy)
+
+df_Benchmark_LS_1_CAC <- read.csv('../ARIMA-LSTM/Results/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_Benchmark_LS_1_CAC <- data.frame(Date = as.Date(df_Benchmark_LS_1_CAC$Date), Value = df_Benchmark_LS_1_CAC$buy_n_hold)
+
+df_CAC_LSTM_SENS_1_LS <- read.csv('../ARIMA-LSTM/Results/CAC/Sensitivity Analysis/SENS_1/Visualisations/df_EC_LS_MAIN.csv')
+df_CAC_LSTM_SENS_1_LS <- data.frame(Date = as.Date(df_CAC_LSTM_SENS_1_LS$Date), Value = df_CAC_LSTM_SENS_1_LS$strategy)
+
+df_CAC_LSTM_SENS_1A_LS <- read.csv('../ARIMA-LSTM/Results/CAC/Sensitivity Analysis/SENS_1A/Visualisations/df_EC_LS_MAIN.csv')
+df_CAC_LSTM_SENS_1A_LS <- data.frame(Date = as.Date(df_CAC_LSTM_SENS_1A_LS$Date), Value = df_CAC_LSTM_SENS_1A_LS$strategy)
+
+
+ec_base_model_CAC_LS_SENS_1 <- ggplot() +
+  geom_line(data = df_Benchmark_LS_1_CAC, aes(x = Date, y = Value, color = "CAC 40")) +
+  geom_line(data = df_CAC_LSTM_LS_1, aes(x = Date, y = Value, color = "Base Case Dropout = 0.075")) +
+  geom_line(data = df_CAC_LSTM_SENS_1_LS, aes(x = Date, y = Value, color = "Dropout = 0.05")) +
+  geom_line(data = df_CAC_LSTM_SENS_1A_LS, aes(x = Date, y = Value, color = "Dropout = 0.1")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("CAC 40", "Base Case Dropout = 0.075", "Dropout = 0.05", "Dropout = 0.1")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+
+#...... CAC 40 Long-Only ..........#
+
+df_CAC_LSTM_1 <- read.csv('../ARIMA-LSTM/Results/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_CAC_LSTM_1 <- data.frame(Date = as.Date(df_CAC_LSTM_1$Date), Value = df_CAC_LSTM_1$strategy)
+
+df_Benchmark_CAC <- read.csv('../ARIMA-LSTM/RESULTS/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LO_MAIN.csv')
+df_Benchmark_CAC <- data.frame(Date = as.Date(df_Benchmark_CAC$Date), Value = df_Benchmark_CAC$buy_n_hold)
+
+df_CAC_LSTM_SENS_2 <- read.csv('../ARIMA-LSTM/Results/CAC/Sensitivity Analysis/SENS_2/Visualisations/df_EC_LO_MAIN.csv')
+df_CAC_LSTM_SENS_2 <- data.frame(Date = as.Date(df_CAC_LSTM_SENS_2$Date), Value = df_CAC_LSTM_SENS_2$strategy)
+
+df_CAC_LSTM_SENS_2A <- read.csv('../ARIMA-LSTM/Results/CAC/Sensitivity Analysis/SENS_2A/Visualisations/df_EC_LO_MAIN.csv')
+df_CAC_LSTM_SENS_2A <- data.frame(Date = as.Date(df_CAC_LSTM_SENS_2A$Date), Value = df_CAC_LSTM_SENS_2A$strategy)
+
+ec_base_model_CAC_LO_SENS_2 <- ggplot() +
+  geom_line(data = df_Benchmark_CAC, aes(x = Date, y = Value, color = "CAC 40")) +
+  geom_line(data = df_CAC_LSTM_1, aes(x = Date, y = Value, color = "Base Case Batch Size = 32")) +
+  geom_line(data = df_CAC_LSTM_SENS_2, aes(x = Date, y = Value, color = "Batch Size = 16")) +
+  geom_line(data = df_CAC_LSTM_SENS_2A, aes(x = Date, y = Value, color = "Batch Size = 64")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("CAC 40", "Base Case Batch Size = 32", "Batch Size = 16", "Batch Size = 64")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+#...... CAC 40 Long-Short ..........#
+df_CAC_LSTM_LS_1 <- read.csv('../ARIMA-LSTM/Results/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_CAC_LSTM_LS_1 <- data.frame(Date = as.Date(df_CAC_LSTM_LS_1$Date), Value = df_CAC_LSTM_LS_1$strategy)
+
+df_Benchmark_LS_1_CAC <- read.csv('../ARIMA-LSTM/Results/CAC/Sensitivity Analysis/RANDOM_SEARCH_1/Visualisations/df_EC_LS_MAIN.csv')
+df_Benchmark_LS_1_CAC <- data.frame(Date = as.Date(df_Benchmark_LS_1_CAC$Date), Value = df_Benchmark_LS_1_CAC$buy_n_hold)
+
+df_CAC_LSTM_SENS_2_LS <- read.csv('../ARIMA-LSTM/Results/CAC/Sensitivity Analysis/SENS_2/Visualisations/df_EC_LS_MAIN.csv')
+df_CAC_LSTM_SENS_2_LS <- data.frame(Date = as.Date(df_CAC_LSTM_SENS_2_LS$Date), Value = df_CAC_LSTM_SENS_2_LS$strategy)
+
+df_CAC_LSTM_SENS_2A_LS <- read.csv('../ARIMA-LSTM/Results/CAC/Sensitivity Analysis/SENS_2A/Visualisations/df_EC_LS_MAIN.csv')
+df_CAC_LSTM_SENS_2A_LS <- data.frame(Date = as.Date(df_CAC_LSTM_SENS_2A_LS$Date), Value = df_CAC_LSTM_SENS_2A_LS$strategy)
+
+
+ec_base_model_CAC_LS_SENS_2 <- ggplot() +
+  geom_line(data = df_Benchmark_LS_1_CAC, aes(x = Date, y = Value, color = "CAC 40")) +
+  geom_line(data = df_CAC_LSTM_LS_1, aes(x = Date, y = Value, color = "Base Case Batch Size = 32")) +
+  geom_line(data = df_CAC_LSTM_SENS_2_LS, aes(x = Date, y = Value, color = "Batch Size = 16")) +
+  geom_line(data = df_CAC_LSTM_SENS_2A_LS, aes(x = Date, y = Value, color = "Batch Size = 64")) +
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("CAC 40", "Base Case Batch Size = 32", "Batch Size = 16", "Batch Size = 64")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+  ) + ylab('Equity')
+
+
+ec_base_model_CAC_LO_SENS_1 <- ec_base_model_CAC_LO_SENS_1 + theme(axis.title.x = element_blank(),
+                                                                   axis.title.y = element_blank())
+ec_base_model_CAC_LS_SENS_1 <- ec_base_model_CAC_LS_SENS_1 + theme(axis.title.x = element_blank(),
+                                                                   axis.title.y = element_blank())
+
+ec_base_model_CAC_LO_SENS_2 <- ec_base_model_CAC_LO_SENS_2 + theme(axis.title.x = element_blank(),
+                                                                   axis.title.y = element_blank())
+ec_base_model_CAC_LS_SENS_2 <- ec_base_model_CAC_LS_SENS_2 + theme(axis.title.x = element_blank(),
+                                                                   axis.title.y = element_blank())
+
+grid.arrange(ec_base_model_SnP_LO_SENS_1, ec_base_model_SnP_LS_SENS_1, ec_base_model_SnP_LO_SENS_2, ec_base_model_SnP_LS_SENS_2, ec_base_model_FTSE_LO_SENS_1, ec_base_model_FTSE_LS_SENS_1, ec_base_model_FTSE_LO_SENS_2, ec_base_model_FTSE_LS_SENS_2, ec_base_model_CAC_LO_SENS_1, ec_base_model_CAC_LS_SENS_1, ec_base_model_CAC_LO_SENS_2, ec_base_model_CAC_LS_SENS_2, ncol=2)
+
+```
+
+\vspace{-0.5cm}\noindent\linespread{0.65}\selectfont {\scriptsize \textbf{Note}: \textit{The figure presents the equity curves for the sensitivity analysis performed on the LSTM-ARIMA model. S\&P 500, FTSE 100, and CAC 40 represents the benchmark Buy\&Hold strategy for each index respectively. S\&P 500 index trading starts on 2005-01-25, FTSE 100 equity index trading starts on 2005-01-13, and CAC 40 equity index trading starts on 2004-12-28. Each equity curve consists of daily frequency data. The transaction costs are 0.1\%.}}
+
+\linespread{1.5}\selectfont
+
+\pagebreak
+
+\renewcommand{\arraystretch}{0.72}
+\fontsize{9}{9.5}\selectfont
+```{r SENS_perf_metric__LO_LS ARIMA_LSTM for all indices, results='asis'}
+##### LONG-ONLY S&P500 #####
+perf_metrics_base_model_L_O_SnP <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/S&P 500/df_perf_metr_LO_ARIMA_LSTM.csv')
+perf_metrics_base_model_L_O_SnP[is.na(perf_metrics_base_model_L_O_SnP)] <- ""
+
+##### LONG-SHORT S&P500 #####
+perf_metrics_base_model_LS_SnP <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/S&P 500/df_perf_metr_LS_ARIMA_LSTM.csv')
+perf_metrics_base_model_LS_SnP[is.na(perf_metrics_base_model_LS_SnP)] <- ""
+
+##### LONG-ONLY FTSE100 #####
+perf_metrics_base_model_L_O_FTSE <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/FTSE 100/df_perf_metr_LO_ARIMA_LSTM.csv')
+perf_metrics_base_model_L_O_FTSE[is.na(perf_metrics_base_model_L_O_FTSE)] <- ""
+
+##### LONG-SHORT FTSE100 #####
+perf_metrics_base_model_LS_FTSE <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/FTSE 100/df_perf_metr_LS_ARIMA_LSTM.csv')
+perf_metrics_base_model_LS_FTSE[is.na(perf_metrics_base_model_LS_FTSE)] <- ""
+
+##### LONG-ONLY CAC40 #####
+perf_metrics_base_model_L_O_CAC <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/CAC 40/df_perf_metr_LO_ARIMA_LSTM.csv')
+perf_metrics_base_model_L_O_CAC[is.na(perf_metrics_base_model_L_O_CAC)] <- ""
+
+##### LONG-SHORT CAC40 #####
+perf_metrics_base_model_LS_CAC <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/CAC 40/df_perf_metr_LS_ARIMA_LSTM.csv')
+perf_metrics_base_model_LS_CAC[is.na(perf_metrics_base_model_LS_CAC)] <- ""
+
+perf_metrics_base_model_LO_LS <- bind_rows(perf_metrics_base_model_L_O_SnP, perf_metrics_base_model_LS_SnP, perf_metrics_base_model_L_O_FTSE, perf_metrics_base_model_LS_FTSE, perf_metrics_base_model_L_O_CAC, perf_metrics_base_model_LS_CAC)
+
+# Create a Markdown table
+kable(perf_metrics_base_model_LO_LS, format = "simple", col.names = c("" , "", "ARC(%)", "ASD(%)", "MD(%)", "MLD", "IR*(%)", "IR**(%)"), caption = 'LSTM-ARIMA Sensitivity Analysis performance metrics', align = 'c')
+```
+
+\normalsize
+\vspace{-0.5cm}\noindent\linespread{0.65}\selectfont {\scriptsize \textbf{Note}: \textit{The table shows the performance metrics for the sensitivity analysis performed on the LSTM-ARIMA model. S\&P 500, FTSE 100, and CAC 40 represents the benchmark Buy\&Hold strategy for each index respectively. S\&P 500 index trading starts on 2005-01-25, FTSE 100 equity index trading starts on 2005-01-13, and CAC 40 equity index trading starts on 2004-12-28. In the base case scenario, the Dropout rate is set to 0.075 and the Batch Size is set to 32. The transaction costs are 0.1\%. The best values are in bold and are bolded with respect to the base case scenario.}}
+
+\linespread{1.5}\selectfont
+
+\pagebreak
+
+# Ensembled AIS
+
+We create an ensemble AIS in order to spread the results of our investment algorithms among all the financial instruments. The idea is that we invest 1 dollar in each financial instrument and then test Long-Only and Long-Short strategy. We assume that the instruments are perfectly divisible and assign a weight of ${1}/{3}$ to each equity index. The trading in this case starts on *2005-01-25* and goes until *2023-08-30*. Figure 11 and Table 8 present the results for our ensemble AIS. When we aggregate all the equity indices, there is a notable improvement in our results.We achieve a significantly enhanced risk-adjusted return ($IR^{**}$). Evidently, the LSTM-ARIMA model combined with the Long-Short strategy outperforms all other approaches, yielding an impressive $IR^{**}$ of *70.54%*.
+
+```{r fig_ensemble_AIS, fig.cap="The Long-Only and Long-Short Strategy of our ensemble AIS", fig.width=10, fig.height=7, results='hide'}
+#...... ensemble AIS Long-Only ..........#
+
+df_SnP_ARIMA_1 <- read.csv('../PERFORMANCE_METRICS/PORTFOLIO_RESULTS/portfolio_arima_results.csv')
+df_SnP_ARIMA_1 <- data.frame(Date = as.Date(df_SnP_ARIMA_1$Date), Value = df_SnP_ARIMA_1$long_only)
+
+df_SnP_LSTM_1 <- read.csv('../PERFORMANCE_METRICS/PORTFOLIO_RESULTS/portfolio_lstm_results.csv')
+df_SnP_LSTM_1 <- data.frame(Date = as.Date(df_SnP_LSTM_1$Date), Value = df_SnP_LSTM_1$long_only)
+
+df_SnP_ARIMA_LSTM_1 <- read.csv('../PERFORMANCE_METRICS/PORTFOLIO_RESULTS/portfolio_arima_lstm_results.csv')
+df_SnP_ARIMA_LSTM_1 <- data.frame(Date = as.Date(df_SnP_ARIMA_LSTM_1$Date), Value = df_SnP_ARIMA_LSTM_1$long_only)
+
+df_Benchmark_SnP <- read.csv('../PERFORMANCE_METRICS/PORTFOLIO_RESULTS/portfolio_lstm_results.csv')
+df_Benchmark_SnP <- data.frame(Date = as.Date(df_Benchmark_SnP$Date), Value = df_Benchmark_SnP$buynhold)
+
+
+ec_base_model_SnP_LO <- ggplot() +
+  geom_line(data = df_Benchmark_SnP, aes(x = Date, y = Value, color = "Buy&Hold")) +
+  geom_line(data = df_SnP_ARIMA_1, aes(x = Date, y = Value, color = "ARIMA")) +
+  geom_line(data = df_SnP_LSTM_1, aes(x = Date, y = Value, color = "LSTM")) +
+  geom_line(data = df_SnP_ARIMA_LSTM_1, aes(x = Date, y = Value, color = "LSTM-ARIMA")) + #"ARIMA",
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("Buy&Hold", "ARIMA", "LSTM", "LSTM-ARIMA")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+    ) + ylab('Equity')
+
+#...... ensemble AIS Long-Short ..........#
+df_SnP_ARIMA_LS_1 <-  read.csv('../PERFORMANCE_METRICS/PORTFOLIO_RESULTS/portfolio_arima_results.csv')
+df_SnP_ARIMA_LS_1 <- data.frame(Date = as.Date(df_SnP_ARIMA_LS_1$Date), Value = df_SnP_ARIMA_LS_1$long.short)
+
+df_SnP_LSTM_LS_1 <- read.csv('../PERFORMANCE_METRICS/PORTFOLIO_RESULTS/portfolio_lstm_results.csv')
+df_SnP_LSTM_LS_1 <- data.frame(Date = as.Date(df_SnP_LSTM_LS_1$Date), Value = df_SnP_LSTM_LS_1$long.short)
+
+df_SnP_ARIMA_LSTM_LS_1 <- read.csv('../PERFORMANCE_METRICS/PORTFOLIO_RESULTS/portfolio_arima_lstm_results.csv')
+df_SnP_ARIMA_LSTM_LS_1 <- data.frame(Date = as.Date(df_SnP_ARIMA_LSTM_LS_1$Date), Value = df_SnP_ARIMA_LSTM_LS_1$long.short)
+
+df_Benchmark_LS_1_SnP <- read.csv('../PERFORMANCE_METRICS/PORTFOLIO_RESULTS/portfolio_lstm_results.csv')
+df_Benchmark_LS_1_SnP <- data.frame(Date = as.Date(df_Benchmark_LS_1_SnP$Date), Value = df_Benchmark_LS_1_SnP$buynhold)
+
+
+ec_base_model_LS_SnP <- ggplot() +
+  geom_line(data = df_Benchmark_LS_1_SnP, aes(x = Date, y = Value, color = "Buy&Hold")) +
+  geom_line(data = df_SnP_ARIMA_LS_1, aes(x = Date, y = Value, color = "ARIMA")) +
+  geom_line(data = df_SnP_LSTM_LS_1, aes(x = Date, y = Value, color = "LSTM")) +
+  geom_line(data = df_SnP_ARIMA_LSTM_LS_1, aes(x = Date, y = Value, color = "LSTM-ARIMA")) + 
+  scale_color_manual(values = c("darkorange", "darkblue", "darkgreen", "darkred"), name='Strategy', limits=c("Buy&Hold", "ARIMA", "LSTM", "LSTM-ARIMA")) + theme_bw() + theme(
+    legend.position = c(.02, .98),
+    legend.justification = c("left", "top"),
+    legend.box.just = "left",
+    legend.margin = margin(1, 1, 1, 1),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black"),
+    legend.title = element_blank(), 
+    legend.spacing.y = unit(0, "mm"), 
+    ) + ylab('Equity')
+
+ec_base_model_SnP_LO <- ec_base_model_SnP_LO + theme(axis.title.x = element_blank(),
+                                               axis.title.y = element_blank())
+ec_base_model_LS_SnP <- ec_base_model_LS_SnP + theme(axis.title.x = element_blank(),
+                                               axis.title.y = element_blank())
+
+
+grid.arrange(ec_base_model_SnP_LO, ec_base_model_LS_SnP, nrow=2)
+
+```
+
+\vspace{-0.5cm}\noindent\linespread{0.65}\selectfont {\scriptsize \textbf{Note}: \textit{The equity curves are a wighted average of the equity curves of all the equity indices. The weight is equal to 1/3. The first plot presents the equity curve for the Long-Only strategy and the second plot presents the equity curve for the Long-Short strategy. The trading lasts from 2005-01-25 until 2023-08-30. Each equity curve consists of daily frequency data. The transaction costs are 0.1\%.}}
+
+\linespread{1.5}\selectfont
+
+\pagebreak
+
+\renewcommand{\arraystretch}{0.75}
+\fontsize{10}{10.5}\selectfont
+```{r perf_metric_ensemble_AIS, results='asis', fig.align='center'}
+
+##### LONG-ONLY ensemble AIS #####
+perf_metrics_base_model_L_O <- read.csv('../PERFORMANCE_METRICS/PORTFOLIO_RESULTS/df_perf_metr_LO.csv')
+perf_metrics_base_model_L_O[is.na(perf_metrics_base_model_L_O)] <- ""
+
+##### LONG-SHORT ensemble AIS #####
+perf_metrics_base_model_LS <- read.csv('../PERFORMANCE_METRICS/PORTFOLIO_RESULTS/df_perf_metr_LS.csv')
+perf_metrics_base_model_LS[is.na(perf_metrics_base_model_LS)] <- ""
+
+perf_metrics_base_model_LO_LS_SnP <- bind_rows(perf_metrics_base_model_L_O, perf_metrics_base_model_LS)
+
+# Create a Markdown table
+kable(perf_metrics_base_model_LO_LS_SnP, format = "simple", col.names = c("" , "", "ARC(%)", "ASD(%)", "MD(%)", "MLD", "IR*(%)", "IR**(%)"), caption = 'Performance metrics for ensemble AIS')
+```
+
+\normalsize
+\vspace{-0.5cm}\noindent\linespread{0.65}\selectfont {\scriptsize \textbf{Note}: \textit{The trading lasts from 2005-01-25 until 2023-08-30. The transaction costs are 0.1\%. The best strategy is the one that holds the highest Modified Information Ratio ($IR^{**}$). Columns with the best corresponding values are denoted in bold.}}
+
+\linespread{1.5}\selectfont
+
+# Conclusion
+
+The aim of this study was to create a strategy using LSTM-ARIMA that performs better than the individual algorithms. In order to assess the performance of tested approaches, we created three algorithmic investment strategies based on ARIMA, LSTM, and LSTM-ARIMA models. We conducted hyperparameter tuning using random search. The walk-forward optimization was applied to perform the model training and backtesting. The best model was chosen based on the conditions presented in the section 4.7. Next, we generated buy/sell signals using the condition explained in the Section 4.8. The algorithmic investment strategy was tested on three different equity indices: S\&P 500, FTSE 100, and CAC 40. It was trained and tested on daily frequency data between the period of January 2000 and August 2023. The algorithm predicted the next day closing price based on the historical data and was classified as a regression problem.
+
+According to our initial hypothesis, the LSTM-ARIMA model was expected to outperform other algorithms in the majority of cases. The LSTM-ARIMA model indeed outperformed all the other algorithm in all the cases, the summary can be read in the section 5.2 where it is outlined which strategy performed the best based on the $IR^{**}$ metric. Therefore, we conclude that we have no grounds to rejection our hypothesis. Based on the results, below are the answers to the research questions stated in the Introduction:}
+
+> *RQ1. Are the investment algorithms robust to changes in the asset?* \newline
+Our hybrid model outperforms all the other models across all equity indices, though with varying performance metrics the varying performance metrics across different assets indicate that our algorithms are not robust to changes in the asset. This suggests that the algorithms' performance is sensitive to the specific characteristics and dynamics of each asset, requiring further modifications or adaptations to improve their effectiveness across different assets. \newline 
+> *RQ2. Does LSTM-ARIMA perform better than the models individually?* \newline
+Based on the findings presented in Section 5.1 and the performance metrics provided in Tables 2, 3, and 4, it can be concluded that LSTM-ARIMA  outperforms the other models examined. \newline
+> *RQ3. Are the investment algorithmic robust to changes in the model hyperparameters?* \newline
+In section 6, it becomes apparent that modifications to the hyperparameters have an impact on the results, indicating a lack of robustness. This implies that the model's performance is sensitive to the specific choices made for hyperparameter settings. \newline
+> *RQ4. Does the Long-Only or Long-Short strategy outperform the Buy&Hold?* \newline
+Based on the analysis presented in Section 5.1 and the data provided in Tables 2, 3, and 4, several findings can be observed. In case of the S&P 500 equity index, it has been observed that both the Long-Only and Long-Short strategies implemented with the LSTM-ARIMA model, along with the Long-Short strategy implemented with the ARIMA model outperforms the Buy&Hold strategy. In case the FTSE 100 equity index, the Long-Only and Long-Short strategies implemented with the LSTM-ARIMA and LSTM model outperforms the Buy&Hold strategy. In case of the CAC 40 equity index, it has been noticed that both the Long-Only and Long-Short strategies implemented with the LSTM-ARIMA model, along with the Long-Only strategy implemented with the LSTM model outperforms the Buy&Hold strategy.
+
+This study has made a valuable contribution to existing literature by introducing a hybrid approach that combines modern forecasting models, such as LSTM and ARIMA, for algorithmic investment strategies. Previous research has explored this hybrid approach in various domains. For instance, @bali2020novel utilized LSTM-ARIMA to forecast wind speed, @fan2021well optimized the hybrid model for well production forecasting, @dave2021forecasting employed it to forecast exports in Indonesia, and @arnob2019dhaka used the hybrid approach for forecasting the Dhaka stock exchange (DSE). However, our study stands out by applying this model specifically to algorithmic investment strategies, a relatively uncommon application for this hybrid approach. In the base case scenario outlined in Section 5, our hybrid approach outperformed all the models, aligning with our expectations. However, through the course of our sensitivity analysis, it became apparent that there is room for further enhancements by adjusting the dropout rate and the batch size.
+
+There are several potential directions to expand upon this research. Firstly, it would be valuable to investigate whether utilizing returns as inputs instead of the closing price impacts the outcomes. Secondly, the sensitivity analysis revealed noteworthy improvements in the results by reducing the dropout rate and the batch size S\&P 500 equity index Long-Only strategy. Therefore, conducting a more comprehensive sensitivity analysis by examining a broader range of dropout rates and sizes would be beneficial. Thirdly, it is worth evaluating the changes in results when considering a binary crossentropy problem. Finally, it is important to explore the use of a specific threshold that indicates when to change the position in both the Long-Only and Long-Short strategies.
+
+# References

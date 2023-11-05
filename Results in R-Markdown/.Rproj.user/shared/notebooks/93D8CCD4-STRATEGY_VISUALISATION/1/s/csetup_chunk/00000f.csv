@@ -1,0 +1,7 @@
+"0","knitr::opts_chunk$set(echo = FALSE)"
+"0","library(ggplot2) "
+"0","library(gridExtra)"
+"0","library(knitr)"
+"0","library('pacman')"
+"0","library(kableExtra)"
+"0","p_load(dplyr, forcats, knitr, kableExtra, tinytex, janitor)"

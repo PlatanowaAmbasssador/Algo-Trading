@@ -1,0 +1,6 @@
+"0","##### LONG-ONLY DAX40 #####
+perf_metrics_base_model_L_O <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/DAX/REAL_RS/df_perf_metr_LO.csv')
+"
+"2","Warning: cannot open file '../PERFORMANCE_METRICS/PERF_METR_RESULTS/DAX/REAL_RS/df_perf_metr_LO.csv': No such file or directory"
+"2","Error in file(file, ""rt"") : cannot open the connection
+"

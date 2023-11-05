@@ -1,0 +1,5 @@
+"0","kable(perf_metrics_base_model_LO_LS_CAC, ""pipe"", col.names = c("""" , ""ARC(%)"", ""ASD(%)"", ""MD(%)"", ""MLD"", ""IR*"", ""IR**""), align = ""c"", caption = 'Performance statistics for CAC 40 index', padding = -3L)
+"
+"2","Error in dimnames(x) <- dn : 
+  length of 'dimnames' [2] not equal to array extent
+"

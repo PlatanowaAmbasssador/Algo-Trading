@@ -1,0 +1,5 @@
+"0","df_descrip <- read.csv('./images/df_descrip.csv')
+"
+"2","Warning: cannot open file './images/df_descrip.csv': No such file or directory"
+"2","Error in file(file, ""rt"") : cannot open the connection
+"

@@ -1,0 +1,6 @@
+"0","##### LONG-SHORT S&P500 #####
+perf_metrics_base_model_LS_SnP <- read.csv('../PERFORMANCE_METRICS/PERF_METR_RESULTS/S&P 500/df_perf_metr_LS_ARIMA.csv')
+"
+"2","Warning: cannot open file '../PERFORMANCE_METRICS/PERF_METR_RESULTS/S&P 500/df_perf_metr_LS_ARIMA.csv': No such file or directory"
+"2","Error in file(file, ""rt"") : cannot open the connection
+"

@@ -1,0 +1,5 @@
+"0","df_SnP_LSTM_1 <- read.csv('../ARIMA/Results/S&P500/Sensitivity Analysis/REAL_1/Visualisations/df_EC_LO_MAIN.csv')
+"
+"2","Warning: cannot open file '../ARIMA/Results/S&P500/Sensitivity Analysis/REAL_1/Visualisations/df_EC_LO_MAIN.csv': No such file or directory"
+"2","Error in file(file, ""rt"") : cannot open the connection
+"

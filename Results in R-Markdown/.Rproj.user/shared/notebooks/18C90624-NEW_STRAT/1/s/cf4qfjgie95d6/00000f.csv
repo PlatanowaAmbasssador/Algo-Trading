@@ -1,0 +1,20 @@
+"0","grid.arrange(ec_base_model_SnP_LO_SENS_ARIMA, ec_base_model_SnP_LS_SENS_ARIMA, ec_base_model_FTSE_LO_SENS_ARIMA, ec_base_model_FTSE_LS_SENS_ARIMA, ec_base_model_CAC_LO_SENS_ARIMA, ec_base_model_CAC_LS_SENS_ARIMA, ncol=2)
+"
+"1","[1m[33mError[39m in `geom_line()`:[22m
+[38;5;232m[33m![38;5;232m Problem while computing aesthetics.
+[36mℹ[38;5;232m Error occurred in the 2nd layer.[39m
+[1mCaused by error in `FUN()`:[22m
+[33m![39m object 'Value' not found
+Backtrace:
+[90m  1. [39m[1mgridExtra[22m::grid.arrange(...)
+[90m  2. [39mgridExtra::arrangeGrob(...)
+[90m  3. [39m[1mbase[22m::lapply(grobs[toconv], ggplot2::ggplotGrob)
+[90m  4. [39mggplot2 (local) FUN(X[[i]], ...)
+[90m  9. [39mggplot2:::ggplot_build.ggplot(x)
+     ...
+[90m 17. [39mggplot2 (local) f(l = layers[[i]], d = data[[i]])
+[90m 18. [39ml$compute_aesthetics(d, plot)
+[90m 19. [39mggplot2 (local) compute_aesthetics(..., self = self)
+[90m 20. [39m[1mbase[22m::lapply(aesthetics, eval_tidy, data = data, env = env)
+[90m 21. [39m[1mrlang[22m (local) FUN(X[[i]], ...)
+"
